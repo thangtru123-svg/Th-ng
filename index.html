@@ -105,6 +105,13 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 .pct{display:inline-block;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
 .vol-gtc{color:var(--green);font-weight:700}
+/* GTC AM mini bars */
+.gtc-top-row{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.gtc-top-row:last-child{border-bottom:none}
+.gtc-am-name{flex:1;font-size:12px;font-weight:500;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gtc-bar{flex:1;height:6px;background:#E5E7EB;border-radius:3px;overflow:hidden;min-width:60px}
+.gtc-bar-fill{height:100%;border-radius:3px;transition:width .4s}
+.fill-g{background:var(--green)}.fill-m{background:var(--yellow)}.fill-b{background:var(--red)}
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
@@ -186,6 +193,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="nav-section">Tỉ lệ hoàn</div>
  <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM</button>
  <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC</button>
+ <div class="nav-section">Phân tích</div>
+ <button class="nav-item" onclick="show('p7',this)"><span class="icon">📊</span>GTC Giao / Hàng AM</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -199,6 +208,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -211,6 +221,7 @@ const SHEETS={
  ontime:{name:'AM-ONTIME TTS',range:'A1:F33'},
  fdAM:{name:'FD( tỉ lệ trả) - AM',range:'A1:E24'},
  fdBC:{name:'FD( tỉ lệ trả) - Bưu Cục',range:'A1:G98'},
+ vAM:{name:'v_AM',range:'A1:P100'},
 };
 function sheetURL(n,r){return`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}&range=${r}`;}
 function parseCSV(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const cols=[];let cur='',inQ=false;for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());return cols;});}
@@ -362,6 +373,50 @@ function buildFDAM(rows){
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
 }
 
+function buildGTCAM(rows){
+ const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
+ const giaoTot=data.find(r=>(r[1]||'').trim()==='Grand Total');
+ const hangTot=data.find(r=>(r[9]||'').trim()==='Grand Total');
+ const dateRaw=(data.find(r=>r[2]&&r[2].trim())||{})[2]||'';
+ const dateLabel=dateRaw.split(' - ')[0]||dateRaw;
+ const amGiaoRows=data.filter(r=>r[1]&&r[1].trim()&&r[1].trim()!=='Grand Total'&&!r[1].includes(','));
+ const amHangRows=data.filter(r=>r[10]&&r[10].trim()&&r[10].trim()!=='Grand Total'&&!r[10].includes(','));
+ const nAM=amGiaoRows.length;
+ const totVol=giaoTot?pi(giaoTot[3]):0;
+ const totGTC=giaoTot?pn(giaoTot[5]):0;
+ const totGTCCls=totGTC>=65?'var(--green)':totGTC>=50?'var(--yellow)':'var(--red)';
+ const totHangVol=hangTot?pi(hangTot[12]):0;
+ const totLTC=hangTot?pn(hangTot[14]):0;
+ const totLC=hangTot?pn(hangTot[15]):0;
+ // Top 5 AM thấp nhất
+ const topLow=[...amGiaoRows].sort((a,b)=>pn(a[5])-pn(b[5])).slice(0,5);
+ const topLowHTML=topLow.map(r=>{
+  const p=pn(r[5]);const cls=p>=65?'g':p>=50?'m':'b';
+  return`<div class="gtc-top-row"><span class="gtc-am-name">${r[1]}</span><span class="pct ${cls}">${r[5]}</span><div class="gtc-bar"><div class="gtc-bar-fill ${p>=65?'fill-g':p>=50?'fill-m':'fill-b'}" style="width:${Math.min(100,p)}%"></div></div></div>`;
+ }).join('');
+ return`<div class="page-header"><div class="page-title">Giao Thành Công & Hàng Mới Theo AM</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 ${dateLabel}</span><span>${nAM} AMs · Nguồn: v_AM (Cột B–F: Giao · Cột K–P: Hàng)</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">Tổng Vol Giao</div><div class="kpi-value">${fmt(totVol)}</div><div class="kpi-sub">%Gán: ${giaoTot?giaoTot[4]:'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">%GTC Tổng</div><div class="kpi-value" style="color:${totGTCCls}">${giaoTot?giaoTot[5]:'—'}</div><div class="kpi-sub">Mục tiêu ≥65%</div></div>
+   <div class="kpi"><div class="kpi-label">Tổng Hàng Mới</div><div class="kpi-value">${fmt(totHangVol)}</div><div class="kpi-sub">%Gán: ${hangTot?hangTot[13]:'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">%LTC / %LC Tổng</div><div class="kpi-value" style="font-size:16px">${hangTot?hangTot[14]:'—'} / <span style="color:var(--green)">${hangTot?hangTot[15]:'—'}</span></div><div class="kpi-sub">Lấy TC / Lấy Chuyển</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🔴</div>Top 5 AM %GTC Thấp Nhất</div></div><div style="padding:14px 18px">${topLowHTML}</div></div>
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Ghi Chú</div></div>
+    <div style="padding:14px 18px;font-size:12px;color:var(--text-sub);line-height:1.8">
+     <div>• <strong>Vol Giao</strong>: Tổng đơn cần giao (cột D)</div>
+     <div>• <strong>%GTC</strong>: Tỉ lệ giao thành công (cột F) — Xanh ≥65%, Vàng 50–65%, Đỏ &lt;50%</div>
+     <div>• <strong>Hàng mới</strong>: Vol hàng lấy mới (cột M)</div>
+     <div>• <strong>%LTC</strong>: % Lấy thành công (cột O) — Xanh ≥90%, Vàng 80–90%, Đỏ &lt;80%</div>
+     <div>• <strong>%LC</strong>: % Lấy chuyển (cột P)</div>
+    </div>
+   </div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Bảng AM — Giao &amp; Hàng Tổng Hợp</div><div class="card-info">Sort: %GTC tăng dần (thấp nhất ở đầu) · n = ${dateLabel}</div></div><div class="table-wrap"></div></div>`;
+}
+
 function buildFDBC(rows){
  const data=rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim());
  return`<div class="page-header"><div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
@@ -434,6 +489,69 @@ function buildTableForPage(id,rows,gtcMap={}){
   const trs=data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;return tr;});
   return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs);
  }
+ if(id==='p7'){
+  // Build giao map (col B=r[1], D=r[3], E=r[4], F=r[5], G=r[6])
+  const giaoMap={};
+  data.filter(r=>r[1]&&r[1].trim()&&r[1].trim()!=='Grand Total').forEach(r=>{
+   const n=(r[1]||'').trim();
+   if(!giaoMap[n])giaoMap[n]={vol:pi(r[3]),pGan:pn(r[4]),pGTC:pn(r[5]),pCK:pn(r[6]),raw:r};
+  });
+  // Build hang map (col K=r[10], M=r[12], N=r[13], O=r[14], P=r[15])
+  const hangMap={};
+  data.filter(r=>r[10]&&r[10].trim()&&r[10].trim()!=='Grand Total').forEach(r=>{
+   const n=(r[10]||'').trim();
+   if(!hangMap[n])hangMap[n]={vol:pi(r[12]),pGan:pn(r[13]),pLTC:pn(r[14]),pLC:pn(r[15]),raw:r};
+  });
+  // Individual AMs only (no comma)
+  const amNames=[...new Set([...Object.keys(giaoMap),...Object.keys(hangMap)])].filter(n=>!n.includes(','));
+  amNames.sort((a,b)=>{
+   const ga=giaoMap[a]?giaoMap[a].pGTC:999;
+   const gb=giaoMap[b]?giaoMap[b].pGTC:999;
+   return ga-gb;
+  });
+  const trs=amNames.map((name,i)=>{
+   const g=giaoMap[name]||null;
+   const h=hangMap[name]||null;
+   const pGTC=g?g.pGTC:0;
+   const gtcCls=pGTC>=65?'bgg':pGTC>=50?'bo':'brd';
+   const pLTC=h?h.pLTC:0;
+   const ltcCls=pLTC>=90?'bgg':pLTC>=80?'bo':'brd';
+   const pLC=h?h.pLC:0;
+   const lcCls=pLC>=85?'g':pLC>=75?'m':'b';
+   const tr=document.createElement('tr');
+   tr.innerHTML=`<td>${rk(i)}</td><td><strong>${am(name)}</strong></td>`+
+    `<td><strong>${g?fmt(g.vol):'—'}</strong></td>`+
+    `<td>${g?bg(g.raw[4]||'',90,80):'—'}</td>`+
+    `<td>${g?bar(g.raw[5]||'',gtcCls):'—'}</td>`+
+    `<td><strong>${h?fmt(h.vol):'—'}</strong></td>`+
+    `<td>${h?bg(h.raw[13]||'',90,80):'—'}</td>`+
+    `<td>${h?bar(h.raw[14]||'',ltcCls):'—'}</td>`+
+    `<td><span class="pct ${lcCls}">${h?h.raw[15]:'—'}</span></td>`;
+   return tr;
+  });
+  // Grand Total row
+  const giaoTot=data.find(r=>(r[1]||'').trim()==='Grand Total');
+  const hangTot=data.find(r=>(r[9]||'').trim()==='Grand Total');
+  if(giaoTot||hangTot){
+   const tGTC=giaoTot?pn(giaoTot[5]):0;
+   const tGTCCls=tGTC>=65?'bgg':tGTC>=50?'bo':'brd';
+   const tLTC=hangTot?pn(hangTot[14]):0;
+   const tLTCCls=tLTC>=90?'bgg':tLTC>=80?'bo':'brd';
+   const tLC=hangTot?pn(hangTot[15]):0;
+   const tLCCls=tLC>=85?'g':tLC>=75?'m':'b';
+   const tr=document.createElement('tr');tr.className='tot';
+   tr.innerHTML=`<td colspan="2">Grand Total</td>`+
+    `<td><strong>${giaoTot?giaoTot[3]:'—'}</strong></td>`+
+    `<td>${giaoTot?bg(giaoTot[4]||'',90,80):'—'}</td>`+
+    `<td>${giaoTot?bar(giaoTot[5]||'',tGTCCls):'—'}</td>`+
+    `<td><strong>${hangTot?hangTot[12]:'—'}</strong></td>`+
+    `<td>${hangTot?bg(hangTot[13]||'',90,80):'—'}</td>`+
+    `<td>${hangTot?bar(hangTot[14]||'',tLTCCls):'—'}</td>`+
+    `<td><span class="pct ${tLCCls}">${hangTot?hangTot[15]:'—'}</span></td>`;
+   trs.push(tr);
+  }
+  return mkTable(['#','AM','Vol Giao','%Gán','%GTC','Hàng Mới','%Gán Hàng','%LTC','%LC'],trs);
+ }
 }
 
 async function init(){
@@ -444,6 +562,7 @@ async function init(){
   {id:'p4',key:'ontime',build:buildOntime},
   {id:'p5',key:'fdAM',build:buildFDAM},
   {id:'p6',key:'fdBC',build:buildFDBC},
+  {id:'p7',key:'vAM',build:buildGTCAM},
  ];
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
