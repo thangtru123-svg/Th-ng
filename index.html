@@ -11,31 +11,47 @@
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);display:flex;min-height:100vh;font-size:13px}
 
 /* SPLASH */
-.splash-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0D1B2A 0%,#1A2E45 40%,#0D2137 70%,#1A1A1A 100%);display:flex;align-items:center;justify-content:center;transition:opacity 0.6s ease;cursor:pointer;overflow:hidden}
+.splash-overlay{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 30% 40%,#1A2E45 0%,#0D1B2A 45%,#0A0F1A 100%);display:flex;align-items:center;justify-content:center;transition:opacity 0.7s ease;overflow:hidden}
 .splash-overlay.fade-out{opacity:0;pointer-events:none}
-.splash-inner{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:920px;width:100%;padding:28px 24px}
-.splash-logo-wrap{display:flex;align-items:center;gap:10px}
-.splash-logo-txt{font-size:34px;font-weight:900;background:linear-gradient(135deg,#F15D29,#FF9A6C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
-.splash-divider{width:1px;height:28px;background:rgba(255,255,255,0.2)}
-.splash-vung{color:rgba(255,255,255,0.45);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
-.splash-title{font-size:22px;font-weight:800;color:#fff;text-align:center;line-height:1.3;text-shadow:0 2px 20px rgba(241,93,41,0.25)}
-.splash-title span{color:#F15D29}
-.map-row{display:flex;align-items:flex-start;gap:20px;width:100%}
-.prov-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
-.prov-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;transition:background .2s}
-.prov-card:hover{background:rgba(255,255,255,0.1)}
-.prov-name{font-size:11px;font-weight:700;margin-bottom:3px;white-space:nowrap}
-.prov-spec{font-size:10px;color:rgba(255,255,255,0.5);line-height:1.5}
+/* Animated particles */
+.splash-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.spark{position:absolute;border-radius:50%;animation:sparkle var(--d,4s) ease-in-out infinite var(--delay,0s)}
+@keyframes sparkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:var(--op,.7);transform:scale(1)}}
+/* Glow ring */
+.splash-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(241,93,41,0.08) 0%,transparent 70%);left:50%;top:50%;transform:translate(-50%,-50%);animation:glowPulse 4s ease-in-out infinite}
+@keyframes glowPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.15);opacity:1}}
+.splash-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:960px;width:100%;padding:24px 28px;position:relative;z-index:2}
+/* Top logo bar */
+.splash-logo-wrap{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:40px;padding:8px 20px;backdrop-filter:blur(8px)}
+.splash-logo-txt{font-size:28px;font-weight:900;background:linear-gradient(135deg,#F15D29 0%,#FF9A6C 60%,#FFD0A8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.splash-divider{width:1px;height:22px;background:rgba(255,255,255,0.18)}
+.splash-vung{color:rgba(255,255,255,0.5);font-size:11px;font-weight:600;letter-spacing:2.5px;text-transform:uppercase}
+/* Title */
+.splash-title{font-size:30px;font-weight:900;color:#fff;text-align:center;line-height:1.2;text-shadow:0 0 40px rgba(241,93,41,0.3),0 2px 12px rgba(0,0,0,0.5);animation:titleGlow 3s ease-in-out infinite}
+@keyframes titleGlow{0%,100%{text-shadow:0 0 40px rgba(241,93,41,0.3),0 2px 12px rgba(0,0,0,0.5)}50%{text-shadow:0 0 60px rgba(241,93,41,0.55),0 2px 12px rgba(0,0,0,0.5)}}
+.splash-title span{background:linear-gradient(135deg,#F15D29,#FF9A6C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+/* Map + province grid */
+.map-row{display:flex;align-items:flex-start;gap:18px;width:100%}
+.prov-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.prov-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 11px;transition:all .25s;cursor:default;position:relative;overflow:hidden}
+.prov-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .25s;border-radius:10px}
+.prov-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.22);box-shadow:0 8px 24px rgba(0,0,0,0.3)}
+.prov-name{font-size:11.5px;font-weight:700;margin-bottom:4px;white-space:nowrap}
+.prov-spec{font-size:9.5px;color:rgba(255,255,255,0.5);line-height:1.6}
 .c-bg{color:#FF8A56}.c-ls{color:#FBBF24}.c-qn{color:#38BDF8}.c-bn{color:#A78BFA}.c-hd{color:#34D399}.c-hp{color:#60A5FA}
-.splash-bar-wrap{width:100%;max-width:360px}
-.splash-bar-bg{height:3px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
-.splash-bar-fg{height:100%;background:linear-gradient(90deg,#F15D29,#FF9A6C);border-radius:2px;width:0%;transition:width 0.95s linear}
-.splash-hint{color:rgba(255,255,255,0.3);font-size:11px;text-align:center}
-@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.splash-inner>*{animation:fadeInUp 0.5s ease both}
-.splash-inner>*:nth-child(1){animation-delay:.05s}.splash-inner>*:nth-child(2){animation-delay:.15s}.splash-inner>*:nth-child(3){animation-delay:.25s}.splash-inner>*:nth-child(4){animation-delay:.35s}.splash-inner>*:nth-child(5){animation-delay:.45s}
-@keyframes pulse{0%,100%{opacity:.8}50%{opacity:1}}
-.prov-shape{animation:pulse 3s ease-in-out infinite}
+/* CTA button */
+.splash-cta{margin-top:6px;padding:14px 42px;background:linear-gradient(135deg,#F15D29 0%,#E04010 100%);color:#fff;font-size:15px;font-weight:700;border:none;border-radius:50px;cursor:pointer;letter-spacing:.4px;box-shadow:0 6px 24px rgba(241,93,41,0.45),0 0 0 0 rgba(241,93,41,0.3);transition:all .2s;animation:ctaPulse 2.5s ease-in-out infinite 1.2s}
+.splash-cta:hover{transform:translateY(-2px) scale(1.03);box-shadow:0 10px 32px rgba(241,93,41,0.6),0 0 0 0 rgba(241,93,41,0.3)}
+.splash-cta:active{transform:translateY(0) scale(.98)}
+@keyframes ctaPulse{0%,100%{box-shadow:0 6px 24px rgba(241,93,41,.45),0 0 0 0 rgba(241,93,41,.3)}50%{box-shadow:0 6px 24px rgba(241,93,41,.45),0 0 0 10px rgba(241,93,41,0)}}
+.splash-cta-arrow{display:inline-block;margin-left:8px;transition:transform .2s}
+.splash-cta:hover .splash-cta-arrow{transform:translateX(4px)}
+/* Province SVG pulse */
+@keyframes fadeInUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.splash-inner>*{animation:fadeInUp 0.55s cubic-bezier(.22,.68,0,1.2) both}
+.splash-inner>*:nth-child(1){animation-delay:.08s}.splash-inner>*:nth-child(2){animation-delay:.18s}.splash-inner>*:nth-child(3){animation-delay:.3s}.splash-inner>*:nth-child(4){animation-delay:.44s}.splash-inner>*:nth-child(5){animation-delay:.56s}
+@keyframes provPulse{0%,100%{filter:drop-shadow(0 0 3px rgba(255,255,255,0.1))}50%{filter:drop-shadow(0 0 8px rgba(255,255,255,0.25))}}
+.prov-shape{animation:provPulse 4s ease-in-out infinite}
 
 /* SIDEBAR */
 .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1A1A1A 0%,#252525 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
@@ -103,7 +119,11 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 <body>
 
 <!-- SPLASH -->
-<div id="splash" class="splash-overlay" onclick="dismissSplash()">
+<div id="splash" class="splash-overlay">
+ <!-- Particles -->
+ <div class="splash-particles" id="splashParticles"></div>
+ <!-- Glow ring -->
+ <div class="splash-glow"></div>
  <div class="splash-inner">
   <div class="splash-logo-wrap">
    <div class="splash-logo-txt">GHN</div>
@@ -112,35 +132,39 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
   </div>
   <div class="splash-title">GHN – Vùng XBG<br><span>XIN CHÀO BẠN! 👋</span></div>
   <div class="map-row">
-   <svg viewBox="0 0 480 340" width="320" height="227" xmlns="http://www.w3.org/2000/svg">
-    <rect width="480" height="340" fill="rgba(255,255,255,0.02)" rx="10"/>
+   <svg viewBox="0 0 480 340" width="330" height="234" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+     <filter id="glow-ls"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+     <filter id="glow-bg"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <rect width="480" height="340" fill="rgba(255,255,255,0.015)" rx="12"/>
     <!-- Lạng Sơn -->
-    <path class="prov-shape" d="M 78,12 L 272,12 L 296,52 L 282,122 L 255,150 L 192,153 L 132,143 L 86,113 L 65,66 Z" fill="#FBBF24" fill-opacity=".72" stroke="#fff" stroke-width="1.5"/>
-    <text x="178" y="78" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Lạng Sơn</text>
-    <text x="178" y="93" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="8.5" font-family="Inter,sans-serif">🍊 Hồng · 🥩 Khâu nhục</text>
-    <!-- Bắc Giang -->
-    <path class="prov-shape" d="M 86,156 L 195,154 L 265,156 L 282,195 L 265,246 L 224,268 L 174,270 L 124,255 L 97,226 L 82,190 Z" fill="#F15D29" fill-opacity=".82" stroke="#fff" stroke-width="1.5"/>
-    <text x="183" y="203" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Bắc Giang</text>
-    <text x="183" y="218" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="8.5" font-family="Inter,sans-serif">🍒 Vải thiều · 🐓 Gà đồi</text>
+    <path class="prov-shape" d="M 78,12 L 272,12 L 296,52 L 282,122 L 255,150 L 192,153 L 132,143 L 86,113 L 65,66 Z" fill="#FBBF24" fill-opacity=".75" stroke="#fff" stroke-width="1.8" filter="url(#glow-ls)"/>
+    <text x="178" y="74" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="Inter,sans-serif">Lạng Sơn</text>
+    <text x="178" y="90" text-anchor="middle" fill="rgba(255,255,255,.75)" font-size="9" font-family="Inter,sans-serif">🍊 Hồng · 🥩 Khâu nhục</text>
+    <!-- Bắc Giang (highlighted — home province) -->
+    <path class="prov-shape" d="M 86,156 L 195,154 L 265,156 L 282,195 L 265,246 L 224,268 L 174,270 L 124,255 L 97,226 L 82,190 Z" fill="#F15D29" fill-opacity=".88" stroke="#FFD0A8" stroke-width="2.5" filter="url(#glow-bg)"/>
+    <text x="183" y="200" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="Inter,sans-serif">Bắc Giang ★</text>
+    <text x="183" y="216" text-anchor="middle" fill="rgba(255,255,255,.88)" font-size="9" font-family="Inter,sans-serif">🍒 Vải thiều · 🐓 Gà đồi</text>
     <!-- Quảng Ninh -->
-    <path class="prov-shape" d="M 288,46 L 392,28 L 462,85 L 470,178 L 448,258 L 410,292 L 364,286 L 323,258 L 288,210 L 284,145 L 290,88 Z" fill="#38BDF8" fill-opacity=".68" stroke="#fff" stroke-width="1.5"/>
-    <text x="378" y="152" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Quảng Ninh</text>
-    <text x="378" y="167" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="8.5" font-family="Inter,sans-serif">🦀 Chả mực · 🦪 Hàu</text>
+    <path class="prov-shape" d="M 288,46 L 392,28 L 462,85 L 470,178 L 448,258 L 410,292 L 364,286 L 323,258 L 288,210 L 284,145 L 290,88 Z" fill="#38BDF8" fill-opacity=".7" stroke="#fff" stroke-width="1.8"/>
+    <text x="378" y="148" text-anchor="middle" fill="white" font-size="12" font-weight="800" font-family="Inter,sans-serif">Quảng Ninh</text>
+    <text x="378" y="164" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="9" font-family="Inter,sans-serif">🦀 Chả mực · 🦪 Hàu</text>
     <!-- Bắc Ninh -->
-    <path class="prov-shape" d="M 89,274 L 178,272 L 196,294 L 187,330 L 143,335 L 93,320 L 81,298 Z" fill="#A78BFA" fill-opacity=".75" stroke="#fff" stroke-width="1.5"/>
-    <text x="138" y="302" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Bắc Ninh</text>
-    <text x="138" y="316" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🎎 Bánh phu thê</text>
+    <path class="prov-shape" d="M 89,274 L 178,272 L 196,294 L 187,330 L 143,335 L 93,320 L 81,298 Z" fill="#A78BFA" fill-opacity=".8" stroke="#fff" stroke-width="1.8"/>
+    <text x="138" y="299" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Bắc Ninh</text>
+    <text x="138" y="313" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🎎 Bánh phu thê</text>
     <!-- Hải Dương -->
-    <path class="prov-shape" d="M 200,274 L 282,265 L 330,276 L 326,312 L 300,338 L 252,340 L 200,324 L 194,300 Z" fill="#34D399" fill-opacity=".7" stroke="#fff" stroke-width="1.5"/>
-    <text x="262" y="300" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Dương</text>
-    <text x="262" y="313" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🌿 Bánh đậu xanh</text>
+    <path class="prov-shape" d="M 200,274 L 282,265 L 330,276 L 326,312 L 300,338 L 252,340 L 200,324 L 194,300 Z" fill="#34D399" fill-opacity=".72" stroke="#fff" stroke-width="1.8"/>
+    <text x="262" y="297" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Dương</text>
+    <text x="262" y="311" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🌿 Bánh đậu xanh</text>
     <!-- Hải Phòng -->
-    <path class="prov-shape" d="M 334,278 L 390,268 L 438,284 L 446,318 L 420,338 L 372,338 L 332,320 L 328,296 Z" fill="#60A5FA" fill-opacity=".75" stroke="#fff" stroke-width="1.5"/>
-    <text x="387" y="300" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Phòng</text>
-    <text x="387" y="313" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🦀 Bánh đa cua</text>
+    <path class="prov-shape" d="M 334,278 L 390,268 L 438,284 L 446,318 L 420,338 L 372,338 L 332,320 L 328,296 Z" fill="#60A5FA" fill-opacity=".78" stroke="#fff" stroke-width="1.8"/>
+    <text x="387" y="298" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Phòng</text>
+    <text x="387" y="312" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🦀 Bánh đa cua</text>
     <!-- Sea -->
-    <path d="M 462,85 L 470,178 L 448,258 L 410,292 L 438,284 L 446,318 L 480,330 L 480,65 Z" fill="#0EA5E9" fill-opacity=".12"/>
-    <text x="472" y="200" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="9" font-style="italic" transform="rotate(90,472,200)" font-family="Inter,sans-serif">Biển Đông</text>
+    <path d="M 462,85 L 470,178 L 448,258 L 410,292 L 438,284 L 446,318 L 480,330 L 480,65 Z" fill="#0EA5E9" fill-opacity=".1"/>
+    <text x="472" y="198" text-anchor="middle" fill="rgba(255,255,255,.2)" font-size="9" font-style="italic" transform="rotate(90,472,198)" font-family="Inter,sans-serif">Biển Đông</text>
    </svg>
    <div class="prov-grid">
     <div class="prov-card"><div class="prov-name c-bg">🍒 Bắc Giang</div><div class="prov-spec">Vải thiều Lục Ngạn<br>Gà đồi Yên Thế<br>Bánh đa nem Thủ Dương</div></div>
@@ -151,10 +175,9 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
     <div class="prov-card"><div class="prov-name c-hp">🦀 Hải Phòng</div><div class="prov-spec">Bánh đa cua<br>Nem cua bể<br>Bánh mì cay</div></div>
    </div>
   </div>
-  <div class="splash-bar-wrap">
-   <div class="splash-bar-bg"><div id="splashBar" class="splash-bar-fg"></div></div>
-  </div>
-  <div class="splash-hint">Nhấn bất kỳ đâu để bỏ qua · Tự chuyển sau <span id="splashCount">5</span>s</div>
+  <button class="splash-cta" onclick="dismissSplash()">
+   Click vào đây để xem Dashboard <span class="splash-cta-arrow">→</span>
+  </button>
  </div>
 </div>
 
@@ -208,7 +231,7 @@ function pi(v){return parseInt((v||'').replace(/,/g,''))||0;}
 function gc(v,g,m){const n=pn(v);return n>=g?'g':n>=m?'m':'b';}
 function fd(v){const n=pn(v);return n<=8?'g':n<=12?'m':'b';}
 function bar(pct,cls){const w=Math.min(100,pn(pct)||0);return`<div class="bw"><div class="bgr"><div class="bf ${cls}" style="width:${w}%"></div></div><span class="bv">${pct}</span></div>`;}
-function am(n){return n.includes(SELF)?`<span class="am-self">⭐ ${n}</span>`:n;}
+function am(n){return n.includes(SELF)?`<span class="am-self">${n}</span>`:n;}
 function rk(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return`<div class="rank ${c}">${i+1}</div>`;}
 function bg(v,g,m){return`<span class="pct ${gc(v,g,m)}">${v}</span>`;}
 function fb(v){return`<span class="pct ${fd(v)}">${v}</span>`;}
@@ -218,16 +241,24 @@ function errPage(msg){return`<div class="error-box">⚠️ Không thể tải d�
 
 // splash
 function initSplash(){
- const splash=document.getElementById('splash');if(!splash)return;
- let count=5;
- const bar=document.getElementById('splashBar'),ctr=document.getElementById('splashCount');
- const tmr=setInterval(()=>{count--;if(ctr)ctr.textContent=count;if(bar)bar.style.width=((5-count)/5*100)+'%';if(count<=0){clearInterval(tmr);dismissSplash();}},1000);
- window._splashTimer=tmr;
+ // Generate floating particles
+ const container=document.getElementById('splashParticles');
+ if(container){
+  const colors=['#F15D29','#FF9A6C','#FBBF24','#38BDF8','#A78BFA','#34D399','#60A5FA','#ffffff'];
+  for(let i=0;i<55;i++){
+   const el=document.createElement('div');
+   el.className='spark';
+   const size=Math.random()*4+1.5;
+   const col=colors[Math.floor(Math.random()*colors.length)];
+   const op=Math.random()*0.5+0.2;
+   el.style.cssText=`width:${size}px;height:${size}px;background:${col};left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${(Math.random()*5+3).toFixed(1)}s;--delay:-${(Math.random()*6).toFixed(1)}s;--op:${op.toFixed(2)}`;
+   container.appendChild(el);
+  }
+ }
 }
 function dismissSplash(){
- if(window._splashTimer)clearInterval(window._splashTimer);
  const s=document.getElementById('splash');
- if(s){s.classList.add('fade-out');setTimeout(()=>s.remove(),600);}
+ if(s){s.classList.add('fade-out');setTimeout(()=>s.remove(),700);}
 }
 
 // enrich helpers
@@ -262,7 +293,7 @@ function buildVanHanh(rows){
    <div class="kpi"><div class="kpi-label">Tổng Số Đơn Gán</div><div class="kpi-value" style="color:var(--green)">${kGan}</div><div class="kpi-sub">%Gán tổng: ${kGanPct}</div></div>
    <div class="kpi"><div class="kpi-label">Vol Cao Nhất</div><div class="kpi-value" style="font-size:14px;padding-top:4px">${mxVol.r?mxVol.r[1]:'—'}</div><div class="kpi-sub">${mxVol.tot?fmt(mxVol.tot)+' đơn · '+mxVol.pctTot:'—'}</div></div>
   </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div><div class="table-wrap"></div></div>`;
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80% &nbsp;|&nbsp; %GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div><div class="table-wrap"></div></div>`;
 }
 
 // BUILD BC GIAO
@@ -348,7 +379,7 @@ function buildFDBC(rows){
 }
 
 // TABLE BUILDER
-function buildTableForPage(id,rows){
+function buildTableForPage(id,rows,gtcMap={}){
  const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
  if(id==='p1'){
   const dr=data.filter(r=>r[0].match(/^\d+$/));
@@ -356,18 +387,26 @@ function buildTableForPage(id,rows){
   const trs=dr.map((r,i)=>{
    const e=enrichVH(r);
    const barCls=pn(e.pctTot)>=90?'bgg':pn(e.pctTot)>=80?'bo':'brd';
+   const amName=(r[1]||'').trim();
+   const gtc=gtcMap[amName]||{pctGTC:0,volGTC:0};
+   const gtcCls=gtc.pctGTC>=80?'bgg':gtc.pctGTC>=70?'bo':'brd';
+   const pctGTCStr=gtc.pctGTC>0?gtc.pctGTC.toFixed(1)+'%':'—';
+   const volGTCStr=gtc.volGTC>0?fmt(gtc.volGTC):'—';
    const tr=document.createElement('tr');
-   if((r[1]||'').includes(SELF))tr.className='hl';
-   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td>`;
+   if(amName.includes(SELF))tr.className='hl';
+   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td><td>${bar(pctGTCStr,gtcCls)}</td><td class="vol-gtc">${volGTCStr}</td>`;
    return tr;
   });
   if(totRow){
    const e=enrichVH(totRow);
+   const sumGTCVol=dr.reduce((s,r)=>{const g=gtcMap[(r[1]||'').trim()];return s+(g?g.volGTC:0);},0);
+   const sumTotVol=dr.reduce((s,r)=>{const e2=enrichVH(r);return s+e2.tot;},0);
+   const avgGTCPct=sumTotVol>0?((sumGTCVol/sumTotVol)*100).toFixed(1)+'%':'—';
    const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td>`;
+   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td><td>${bar(avgGTCPct,'bgg')}</td><td class="vol-gtc"><strong>${fmt(sumGTCVol)}</strong></td>`;
    trs.push(tr);
   }
-  return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Tổng Vol','Số Gán','%Gán Tổng'],trs);
+  return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Tổng Vol','Số Gán','%Gán Tổng','%GTC','Vol GTC'],trs);
  }
  if(id==='p2'){
   const trs=data.filter(r=>r[0]&&r[0].trim()).map((r,i)=>{
@@ -418,16 +457,31 @@ async function init(){
  ];
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- await Promise.all(configs.map(async({id,key,build})=>{
+ // Fetch all sheets simultaneously
+ const rawData={};
+ await Promise.all(configs.map(async({id,key})=>{
   try{
    const{name,range}=SHEETS[key];
-   const rows=await fetchSheet(name,range);
-   const el=document.getElementById(id);
-   el.innerHTML=build(rows);
-   const wrap=el.querySelector('.table-wrap');
-   if(wrap){const tbl=buildTableForPage(id,rows);if(tbl)wrap.appendChild(tbl);}
-  }catch(e){document.getElementById(id).innerHTML=errPage(e.message);}
+   rawData[key]=await fetchSheet(name,range);
+  }catch(e){rawData[key]=null;rawData[key+'_err']=e.message;}
  }));
+ // Build GTC lookup map: amName → {pctGTC, volGTC}
+ const gtcMap={};
+ if(rawData.gtcTTS){
+  rawData.gtcTTS.slice(1).filter(r=>r[0]&&r[0].match(/^\d+$/)).forEach(r=>{
+   const amName=(r[1]||'').trim();
+   if(amName){const v1=pi(r[2]),pg=pn(r[4]);gtcMap[amName]={pctGTC:pg,volGTC:Math.round(v1*pg/100)};}
+  });
+ }
+ // Build each page
+ configs.forEach(({id,key,build})=>{
+  const rows=rawData[key];
+  if(!rows){document.getElementById(id).innerHTML=errPage(rawData[key+'_err']||'unknown');return;}
+  const el=document.getElementById(id);
+  el.innerHTML=build(rows);
+  const wrap=el.querySelector('.table-wrap');
+  if(wrap){const tbl=buildTableForPage(id,rows,gtcMap);if(tbl)wrap.appendChild(tbl);}
+ });
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
  document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
