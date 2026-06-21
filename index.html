@@ -115,6 +115,35 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 .gtc-bar-fill{height:100%;border-radius:3px;transition:width .4s}
 .fill-g{background:var(--green)}.fill-m{background:var(--yellow)}.fill-b{background:var(--red)}
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
+/* === AI PAGE === */
+.ai-key-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ai-key-input{flex:1;min-width:200px;padding:9px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-main);color:var(--text);font-size:13px;font-family:inherit}
+.ai-key-input:focus{outline:none;border-color:var(--orange)}
+.ai-key-saved{font-size:11px;color:var(--green);font-weight:600}
+.ai-preset-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.ai-preset-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg-main);color:var(--text-sub);font-size:12px;cursor:pointer;transition:all .15s}
+.ai-preset-btn:hover{border-color:var(--orange);color:var(--orange)}
+.ai-textarea{width:100%;min-height:100px;padding:12px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg-main);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box}
+.ai-textarea:focus{outline:none;border-color:var(--orange)}
+.ai-run-btn{margin-top:12px;padding:11px 32px;background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:8px}
+.ai-run-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(124,58,237,0.4)}
+.ai-run-btn:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.ai-result{margin-top:0;padding:20px;background:var(--bg-main);border-radius:10px;border:1px solid var(--border);min-height:80px;line-height:1.75;color:var(--text)}
+.ai-result h1,.ai-result h2{color:var(--orange);margin:16px 0 8px;font-size:16px}
+.ai-result h3{color:var(--text);margin:12px 0 6px;font-size:14px}
+.ai-result ul,.ai-result ol{padding-left:22px;margin:6px 0}
+.ai-result li{margin:4px 0}
+.ai-result strong{color:var(--text)}
+.ai-result hr{border:none;border-top:1px solid var(--border);margin:16px 0}
+.ai-result blockquote{border-left:3px solid var(--orange);padding-left:12px;color:var(--text-sub);margin:8px 0}
+.ai-result code{background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px}
+.ai-thinking{color:var(--text-sub);font-size:13px;display:flex;align-items:center;gap:8px}
+.ai-thinking-dot{width:8px;height:8px;border-radius:50%;background:var(--orange);animation:aiDot 1.2s ease-in-out infinite}
+.ai-thinking-dot:nth-child(2){animation-delay:.2s}.ai-thinking-dot:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,80%,100%{transform:scale(0.6);opacity:.5}40%{transform:scale(1);opacity:1}}
+.ai-error{color:#f87171;font-size:13px;padding:12px;background:rgba(248,113,113,0.08);border-radius:8px;border:1px solid rgba(248,113,113,0.2)}
+.ai-tag-hl{display:inline-block;background:rgba(52,211,153,0.15);color:#34D399;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-right:4px}
+.ai-tag-ll{display:inline-block;background:rgba(248,113,113,0.15);color:#f87171;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-right:4px}
 </style>
 </head>
 <body>
@@ -192,6 +221,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
  <button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
  <button class="nav-item" onclick="show('p11',this)"><span class="icon">🔄</span>Tỉ lệ trả (Kết thúc giao)</button>
+ <div class="nav-section">AI</div>
+ <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -203,6 +234,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="page" id="p9"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p10"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p11"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p12"></div>
 </main>
 
 <script>
@@ -549,6 +581,180 @@ function dismissSplash(){
  if(s){s.classList.add('fade-out');setTimeout(()=>s.remove(),700);}
 }
 
+// === GLOBAL DATA CACHE (dùng cho AI page) ===
+window._D={};
+
+// === AI PAGE ===
+function buildAIPage(){
+ const p12=document.getElementById('p12');
+ const savedKey=localStorage.getItem('aiApiKey')||'';
+ p12.innerHTML=`
+ <div class="page-header">
+  <div class="page-title">✨ AI - Phân Tích Tổng Quan</div>
+  <div class="page-meta"><span class="tag tag-orange">🤖 Powered by Claude AI · Dữ liệu từ 4 dashboard</span></div>
+ </div>
+ <div class="card" style="margin-bottom:14px">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🔑</div>Anthropic API Key</div></div>
+  <div class="ai-key-wrap">
+   <input type="password" class="ai-key-input" id="aiKeyInput" value="${savedKey}" placeholder="sk-ant-api03-...">
+   <button class="btn" onclick="saveAIKey()" style="background:var(--orange);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">Lưu Key</button>
+   <span class="ai-key-saved" id="aiKeySaved">${savedKey?'✅ Đã lưu':''}</span>
+  </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--text-sub)">Key được lưu trên máy bạn (localStorage), không gửi đi đâu ngoài Anthropic API. Lấy key tại <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--orange)">console.anthropic.com</a></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">💬</div>Nội dung phân tích</div></div>
+  <div style="margin-bottom:10px;font-size:12px;color:var(--text-sub)">Chọn nhanh hoặc tự nhập:</div>
+  <div class="ai-preset-row">
+   <button class="ai-preset-btn" onclick="setAIPrompt('tong-quan')">📊 Tổng quan vận hành</button>
+   <button class="ai-preset-btn" onclick="setAIPrompt('hl-ll')">🏆 Highlight / Lowlight</button>
+   <button class="ai-preset-btn" onclick="setAIPrompt('so-sanh-am')">👤 So sánh AM</button>
+   <button class="ai-preset-btn" onclick="setAIPrompt('tra-hang')">🔄 Phân tích tỉ lệ trả</button>
+   <button class="ai-preset-btn" onclick="setAIPrompt('kien-nghi')">💡 Kiến nghị cải thiện</button>
+  </div>
+  <textarea class="ai-textarea" id="aiPromptArea" placeholder="Ví dụ: Phân tích tổng quan hiệu suất vận hành tuần này, ai đang làm tốt nhất, ai cần cải thiện..."></textarea>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+   <button class="ai-run-btn" id="aiRunBtn" onclick="runAIAnalysis()">
+    <span>✨</span><span>Phân tích ngay</span>
+   </button>
+   <span style="font-size:11px;color:var(--text-sub)" id="aiStatus"></span>
+  </div>
+ </div>
+ <div class="card" id="aiResultCard" style="display:none">
+  <div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Kết quả phân tích</div>
+   <button onclick="copyAIResult()" style="background:none;border:1px solid var(--border);padding:5px 12px;border-radius:6px;color:var(--text-sub);font-size:11px;cursor:pointer">📋 Copy</button>
+  </div>
+  <div class="ai-result" id="aiResultArea"></div>
+ </div>`;
+}
+
+function saveAIKey(){
+ const k=document.getElementById('aiKeyInput').value.trim();
+ localStorage.setItem('aiApiKey',k);
+ document.getElementById('aiKeySaved').textContent=k?'✅ Đã lưu':'';
+}
+
+const AI_PRESETS={
+ 'tong-quan':'Phân tích tổng quan hiệu suất vận hành GHN Vùng XBG trong 7 ngày gần nhất. Nêu rõ: (1) Tình hình chung - tổng lượng đơn, tỉ lệ xử lý, xu hướng; (2) Top 3 AM/BC đang làm tốt nhất; (3) Top 3 AM/BC cần cải thiện; (4) Nhận xét tổng thể.',
+ 'hl-ll':'Liệt kê chi tiết Highlight (điểm sáng) và Lowlight (điểm yếu) trong tuần:\n- HIGHLIGHT: Ai làm tốt, chỉ số nào ấn tượng, ngày nào xuất sắc?\n- LOWLIGHT: Ai đang tụt hậu, vấn đề gì nổi bật, ngày nào kém?\n- Gợi ý hành động cụ thể cho từng điểm yếu.',
+ 'so-sanh-am':'So sánh chi tiết hiệu suất từng AM: xếp hạng theo tỉ lệ xử lý %, khối lượng đơn, và tỉ lệ trả hàng. Ai cải thiện so với đầu tuần? Ai đang giảm? Phân tích nguyên nhân có thể.',
+ 'tra-hang':'Phân tích sâu về tỉ lệ trả hàng (% Return): (1) AM/BC nào có tỉ lệ trả cao nhất/thấp nhất; (2) Xu hướng theo ngày (tăng hay giảm?); (3) Tỉ lệ tổng cộng so với ngưỡng mục tiêu ≤10%; (4) Đề xuất giảm tỉ lệ trả.',
+ 'kien-nghi':'Dựa trên toàn bộ dữ liệu vận hành, đưa ra 5-7 kiến nghị cải thiện cụ thể, có thể hành động ngay. Ưu tiên theo mức độ tác động. Mỗi kiến nghị cần: vấn đề → giải pháp → kỳ vọng kết quả.'
+};
+
+function setAIPrompt(key){
+ document.getElementById('aiPromptArea').value=AI_PRESETS[key]||'';
+}
+
+function gatherDashboardData(){
+ const D=window._D;
+ const lines=[];
+ function pnG(v){return parseFloat((v||'').replace(',','.'))||0;}
+ function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
+
+ // P8/P9 — Xử lý đơn theo AM/BC
+ if(D.xlA&&D.xlA.length>1){
+  const rows=D.xlA.slice(1).filter(r=>r[1]&&r[1].trim());
+  const dates=[...new Set(rows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a))).slice(0,7);
+  const pivot={};
+  rows.forEach(r=>{const name=(r[1]||'').trim();const d=(r[2]||'').trim();if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:pnG(r[3]),pct:pnG(r[4])};});
+  const latestDate=dates[dates.length-1];
+  const amStats=Object.entries(pivot).map(([name,data])=>({name,vol:data[latestDate]?data[latestDate].vol:0,pct:data[latestDate]?data[latestDate].pct*100:0})).sort((a,b)=>b.pct-a.pct);
+  lines.push('=== A. XỬ LÝ ĐƠN THEO AM (ngày gần nhất: '+latestDate+') ===');
+  amStats.slice(0,10).forEach(a=>lines.push(`  ${a.name}: Vol=${Math.round(a.vol*100)}% tổng, %Xử lý=${a.pct.toFixed(1)}%`));
+  if(D.xlB&&D.xlB.length>1){
+   const grandRows=D.xlB.slice(1).filter(r=>(r[1]||'').toLowerCase().includes('grand total'));
+   if(grandRows.length){const g=grandRows.find(r=>(r[2]||'').trim()===latestDate)||grandRows[0];if(g)lines.push(`  TỔNG: %Xử lý=${(pnG(g[4])*100).toFixed(1)}%`);}
+  }
+ }
+
+ // TTS — GTC
+ if(D.ttsAM&&D.ttsAM.length>1){
+  const rows=D.ttsAM.slice(1).filter(r=>r[1]&&r[1].trim());
+  const dates=[...new Set(rows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a))).slice(0,7);
+  const latestDate=dates[dates.length-1];
+  const pivot={};
+  rows.forEach(r=>{const name=(r[1]||'').trim();const d=(r[2]||'').trim();if(!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:pnG(r[3]),gtc:pnG(r[4]),pct:pnG(r[5])};});
+  const amGTC=Object.entries(pivot).map(([name,data])=>({name,pct:data[latestDate]?data[latestDate].pct*100:0,vol:data[latestDate]?Math.round(data[latestDate].vol):0})).sort((a,b)=>b.pct-a.pct);
+  lines.push('\n=== B. TỈ LỆ GTC THEO AM (ngày gần nhất: '+latestDate+') ===');
+  amGTC.slice(0,10).forEach(a=>lines.push(`  ${a.name}: Vol=${a.vol}, %GTC=${a.pct.toFixed(1)}%`));
+ }
+
+ // TLT — Tỉ lệ trả
+ if(D.tltAM&&D.tltAM.length>1){
+  const rows=D.tltAM.slice(1).filter(r=>r[1]&&r[1].trim());
+  const dates=[...new Set(rows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a))).slice(0,7);
+  const latestDate=dates[dates.length-1];
+  const pivot={};
+  rows.forEach(r=>{const name=(r[1]||'').trim();const d=(r[2]||'').trim();if(!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={ret:pnG(r[4])*100};});
+  const amRet=Object.entries(pivot).map(([name,data])=>({name,ret:data[latestDate]?data[latestDate].ret:0})).sort((a,b)=>b.ret-a.ret);
+  lines.push('\n=== C. TỈ LỆ TRẢ HÀNG THEO AM (ngày gần nhất: '+latestDate+') ===');
+  amRet.slice(0,10).forEach(a=>lines.push(`  ${a.name}: %Trả=${a.ret.toFixed(1)}%`));
+  // Tổng cộng TONG_CONG
+  const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6};
+  const recentDates=dates.map(d=>isoDate(d)).filter(d=>TONG_CONG[d]);
+  if(recentDates.length)lines.push('  Tổng cộng (7 ngày): '+recentDates.map(d=>`${d.slice(5)}=${TONG_CONG[d]}%`).join(', '));
+ }
+
+ return lines.join('\n')||'(Dữ liệu chưa được tải — hãy đợi dashboard load xong trước khi phân tích)';
+}
+
+function md2html(text){
+ return text
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/^### (.+)$/gm,'<h3>$1</h3>')
+  .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+  .replace(/^# (.+)$/gm,'<h1>$1</h1>')
+  .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+  .replace(/\*(.+?)\*/g,'<em>$1</em>')
+  .replace(/`(.+?)`/g,'<code>$1</code>')
+  .replace(/^---$/gm,'<hr>')
+  .replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>')
+  .replace(/^[\-\*] (.+)$/gm,'<li>$1</li>')
+  .replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>')
+  .replace(/^\d+\. (.+)$/gm,'<li>$1</li>')
+  .replace(/\n\n/g,'</p><p>')
+  .replace(/^([^<\n].+)$/gm,'<p>$1</p>')
+  .replace(/<p><\/p>/g,'')
+  .replace(/🟢/g,'<span class="ai-tag-hl">🟢 HL</span>')
+  .replace(/🔴/g,'<span class="ai-tag-ll">🔴 LL</span>');
+}
+
+async function runAIAnalysis(){
+ const key=localStorage.getItem('aiApiKey');
+ if(!key){document.getElementById('aiStatus').textContent='⚠️ Chưa có API key';return;}
+ const prompt=(document.getElementById('aiPromptArea').value||'').trim();
+ if(!prompt){document.getElementById('aiStatus').textContent='⚠️ Vui lòng nhập nội dung';return;}
+ const btn=document.getElementById('aiRunBtn');
+ btn.disabled=true;btn.innerHTML='<span>⏳</span><span>Đang phân tích...</span>';
+ document.getElementById('aiStatus').textContent='';
+ const card=document.getElementById('aiResultCard');
+ card.style.display='block';
+ document.getElementById('aiResultArea').innerHTML='<div class="ai-thinking"><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><span style="margin-left:4px">AI đang phân tích dữ liệu...</span></div>';
+ const dataCtx=gatherDashboardData();
+ const systemPrompt='Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.';
+ try{
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+   method:'POST',
+   headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},
+   body:JSON.stringify({model:'claude-opus-4-8',max_tokens:3000,system:systemPrompt,messages:[{role:'user',content:`DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:\n${dataCtx}\n\nYÊU CẦU:\n${prompt}`}]})
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||`Lỗi HTTP ${res.status}`);}
+  const data=await res.json();
+  const text=data.content?.[0]?.text||'(Không có phản hồi)';
+  document.getElementById('aiResultArea').innerHTML=md2html(text);
+  window._lastAIResult=text;
+ }catch(e){
+  const isCORS=e.message.includes('Failed to fetch')||e.name==='TypeError';
+  document.getElementById('aiResultArea').innerHTML=`<div class="ai-error">❌ ${isCORS?'Trình duyệt chặn request (CORS). Thử dùng Chrome và tắt extension chặn request.':e.message}</div>`;
+ }
+ btn.disabled=false;btn.innerHTML='<span>✨</span><span>Phân tích ngay</span>';
+}
+
+function copyAIResult(){
+ if(window._lastAIResult)navigator.clipboard.writeText(window._lastAIResult).then(()=>alert('Đã copy!'));
+}
+
 async function init(){
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
@@ -567,6 +773,8 @@ async function init(){
  if(SHEET_TLT_AM)xlFetches.push(fetchExtSheet(SHEET_TLT_AM).then(d=>tltAM=d).catch(e=>tltErrAM=e.message));
  if(SHEET_TLT_BC)xlFetches.push(fetchExtSheet(SHEET_TLT_BC).then(d=>tltBC=d).catch(e=>tltErrBC=e.message));
  await Promise.all(xlFetches);
+ // Lưu vào global cache cho AI page
+ window._D={xlA,xlB,xlC,xlD,ttsAM,ttsBC,tltAM,tltBC};
  // Build p8 — Tổng quan 7 ngày theo AM
  const p8el=document.getElementById('p8');
  if(xlErrA||xlErrB){
@@ -607,6 +815,8 @@ async function init(){
  } else {
   p11el.innerHTML=errPage('Chưa có dữ liệu Tỉ Lệ Trả — Sheet chưa được public hoặc chưa xuất.');
  }
+ // Build p12 — AI Analysis
+ buildAIPage();
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
  document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
