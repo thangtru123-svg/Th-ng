@@ -10,13 +10,14 @@
   --orange:#F15D29;--orange-dark:#C8461A;--orange-light:#FFF0EB;--orange-mid:#FFD5C2;
   --sidebar-w:204px;--text-main:#1C1C1E;--text-sub:#6B7280;
   --border:#E5E7EB;--bg:#F4F6F9;--card:#FFFFFF;
-  --shadow-sm:0 1px 3px rgba(0,0,0,0.08);
-  --radius:10px;
+  --shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;
   --green:#16A34A;--yellow:#D97706;--red:#DC2626;
   --green-bg:#DCFCE7;--yellow-bg:#FEF9C3;--red-bg:#FEE2E2;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);display:flex;min-height:100vh;font-size:13px}
+
+/* SIDEBAR */
 .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1A1A1A 0%,#252525 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
 .logo-area{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.08)}
 .logo-area img{height:28px;filter:brightness(0) invert(1)}
@@ -28,24 +29,50 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 .nav-item .icon{font-size:14px;flex-shrink:0;width:18px;text-align:center}
 .nav-item .badge{margin-left:auto;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600}
 .nav-item.active .badge{background:rgba(255,255,255,0.25)}
+
+/* refresh button */
+.refresh-btn{display:flex;align-items:center;gap:6px;margin:10px 8px 4px;padding:8px 12px;border-radius:7px;background:rgba(241,93,41,0.15);border:1px solid rgba(241,93,41,0.3);color:var(--orange);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;width:calc(100% - 16px)}
+.refresh-btn:hover{background:rgba(241,93,41,0.25)}
+.refresh-btn.spinning .spin{animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block}
+.last-update{color:rgba(255,255,255,0.3);font-size:9px;text-align:center;padding:4px 8px 10px}
+
+/* MAIN */
 .main{margin-left:var(--sidebar-w);flex:1;padding:22px 26px;max-width:calc(100vw - var(--sidebar-w));overflow-x:hidden}
 .page{display:none}.page.active{display:block}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:12px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}
+.loading-text{color:var(--text-sub);font-size:13px}
+
+/* ERROR */
+.error-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius);padding:16px;color:var(--red);font-size:13px;margin:20px 0}
+
+/* PAGE HEADER */
 .page-header{margin-bottom:18px}
 .page-title{font-size:19px;font-weight:700;color:var(--text-main)}
 .page-meta{color:var(--text-sub);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
 .tag-orange{background:var(--orange-light);color:var(--orange-dark)}
+
+/* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .kpi{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--orange)}
 .kpi-label{font-size:10px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 .kpi-value{font-size:22px;font-weight:700;margin-top:5px;color:var(--text-main);line-height:1.1}
 .kpi-sub{font-size:11px;color:var(--text-sub);margin-top:3px}
+
+/* CARD */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden;margin-bottom:18px}
 .card-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#fff 0%,var(--orange-light) 100%)}
 .card-title{font-size:13px;font-weight:600;color:var(--text-main);display:flex;align-items:center;gap:9px}
 .card-icon{width:28px;height:28px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .card-info{font-size:11px;color:var(--text-sub)}
+
+/* TABLE */
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:500px}
 th{background:#F8F9FA;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap}
@@ -54,130 +81,100 @@ tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAFA}
 tr.hl td{background:linear-gradient(90deg,#FFF5F0,transparent)}
 tr.hl:hover td{background:linear-gradient(90deg,#FFE9E0,transparent)}
-tr.tot td{background:#F8F9FA;font-weight:700;color:var(--text-main);border-top:2px solid var(--orange-mid)}
+tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-mid)}
+
+/* RANK */
 .rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
 .r1{background:#FEF9C3;color:#854D0E}.r2{background:#F1F5F9;color:#475569}.r3{background:#FEF3C7;color:#92400E}.rn{background:#F3F4F6;color:var(--text-sub)}
+
+/* BADGES */
 .pct{display:inline-block;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
+
+/* BAR */
 .bw{display:flex;align-items:center;gap:6px}
 .bgr{flex:1;height:5px;background:#E5E7EB;border-radius:3px;overflow:hidden;min-width:36px}
 .bf{height:100%;border-radius:3px}
 .bo{background:var(--orange)}.bgg{background:var(--green)}.brd{background:var(--red)}
 .bv{font-size:11px;font-weight:600;color:var(--text-main);white-space:nowrap;min-width:42px;text-align:right}
 .am-self{font-weight:700;color:var(--orange-dark)}
+
+@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
+
 <nav class="sidebar">
   <div class="logo-area">
     <img src="https://cdn.hstatic.net/themes/200000472237/1001423864/14/logo.png?v=2874" alt="GHN">
     <div class="logo-sub">Báo Cáo Vận Hành XBG</div>
   </div>
   <div class="nav-section">Vận hành ngày</div>
-  <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Vận Hành AM<span class="badge">21</span></button>
-  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🏪</span>GTC Bưu Cục<span class="badge">31</span></button>
-  <button class="nav-item" onclick="show('p3',this)"><span class="icon">✅</span>GTC TTS / AM<span class="badge">21</span></button>
-  <button class="nav-item" onclick="show('p4',this)"><span class="icon">⏱️</span>Ontime TTS<span class="badge">21</span></button>
+  <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Vận Hành AM</button>
+  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🏪</span>GTC Bưu Cục</button>
+  <button class="nav-item" onclick="show('p3',this)"><span class="icon">✅</span>GTC TTS / AM</button>
+  <button class="nav-item" onclick="show('p4',this)"><span class="icon">⏱️</span>Ontime TTS</button>
   <div class="nav-section">Tỉ lệ hoàn</div>
-  <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM<span class="badge">21</span></button>
-  <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC<span class="badge">42</span></button>
+  <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM</button>
+  <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC</button>
+  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+    <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
+  </button>
+  <div class="last-update" id="lastUpdate"></div>
 </nav>
+
 <main class="main">
-
-<div class="page active" id="p1">
-  <div class="page-header">
-    <div class="page-title">Báo Cáo Vận Hành Theo AM</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 Ngày hiện tại</span><span>Tổng Ca1: 82,003 đơn &nbsp;·&nbsp; Tổng Ca2: 8,559 đơn &nbsp;·&nbsp; 21 AMs</span></div>
-  </div>
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Tổng Ca 1</div><div class="kpi-value">82,003</div><div class="kpi-sub">%Gán TB: 90.95%</div></div>
-    <div class="kpi"><div class="kpi-label">Tổng Ca 2</div><div class="kpi-value">8,559</div><div class="kpi-sub">%Gán TB: 38.40%</div></div>
-    <div class="kpi"><div class="kpi-label">Volume Cao Nhất</div><div class="kpi-value" style="font-size:14px;padding-top:4px">Kiều Văn Nam</div><div class="kpi-sub">10,272 đơn Ca1 · 96.52%</div></div>
-    <div class="kpi"><div class="kpi-label">%Gán Ca1 Cao Nhất</div><div class="kpi-value" style="color:var(--green)">99.11%</div><div class="kpi-sub">Cao Xuân Minh</div></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
-    <div class="table-wrap"><table id="t1"></table></div>
-  </div>
-</div>
-
-<div class="page" id="p2">
-  <div class="page-header">
-    <div class="page-title">GTC Theo Bưu Cục</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 Ngày hiện tại</span><span>31 bưu cục — sắp xếp theo %GTC tăng dần</span></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Hiệu Suất GTC Bưu Cục</div><div class="card-info">%GTC: Xanh ≥70% · Vàng 60–70% · Đỏ &lt;60%</div></div>
-    <div class="table-wrap"><table id="t2"></table></div>
-  </div>
-</div>
-
-<div class="page" id="p3">
-  <div class="page-header">
-    <div class="page-title">GTC TTS Theo AM</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 Ngày hiện tại</span><span>Tổng: 16,397 · %Gán TB: 90.55% · %GTC TB: 75.50%</span></div>
-  </div>
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Tổng Ca 1 TTS</div><div class="kpi-value">16,397</div><div class="kpi-sub">%Gán: 90.55%</div></div>
-    <div class="kpi"><div class="kpi-label">%GTC Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">75.50%</div><div class="kpi-sub">Mục tiêu ≥80%</div></div>
-    <div class="kpi"><div class="kpi-label">GTC Cao Nhất</div><div class="kpi-value" style="color:var(--green)">85.64%</div><div class="kpi-sub">Vi Văn Trịnh</div></div>
-    <div class="kpi"><div class="kpi-label">GTC Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">52.92%</div><div class="kpi-sub">Nguyễn Lâm Thảo</div></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Tỉ Lệ GTC TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div>
-    <div class="table-wrap"><table id="t3"></table></div>
-  </div>
-</div>
-
-<div class="page" id="p4">
-  <div class="page-header">
-    <div class="page-title">Ontime TTS Theo AM</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 2026-06-19 — Thứ Sáu</span><span>Tổng: 18,124 đơn · %Ontime TB: 89.63%</span></div>
-  </div>
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">Tổng Vol GTC</div><div class="kpi-value">18,124</div><div class="kpi-sub">Vol đúng hạn: 16,244</div></div>
-    <div class="kpi"><div class="kpi-label">%Ontime TB</div><div class="kpi-value" style="color:var(--yellow)">89.63%</div><div class="kpi-sub">Mục tiêu ≥90%</div></div>
-    <div class="kpi"><div class="kpi-label">Ontime Cao Nhất</div><div class="kpi-value" style="color:var(--green)">96.56%</div><div class="kpi-sub">Vũ Văn Vinh</div></div>
-    <div class="kpi"><div class="kpi-label">Ontime Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">62.68%</div><div class="kpi-sub">Cao V.Đức + Chu M.Dũng</div></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>Ontime TTS Ngày — Sắp Xếp Tăng Dần</div><div class="card-info">%Ontime: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
-    <div class="table-wrap"><table id="t4"></table></div>
-  </div>
-</div>
-
-<div class="page" id="p5">
-  <div class="page-header">
-    <div class="page-title">Tỉ Lệ Hoàn (FD) Theo AM</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 20/06/2026</span><span>TOTAL: 9.80% · SME: 11.90% · TTS: 11.30% · Shopee: 7.20%</span></div>
-  </div>
-  <div class="kpi-row">
-    <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">9.80%</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
-    <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">29.59%</div><div class="kpi-sub">Chu M.Dũng + Cao V.Đức</div></div>
-    <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">6.45%</div><div class="kpi-sub">Bùi Xuân Quang</div></div>
-    <div class="kpi"><div class="kpi-label">⭐ Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">12.97%</div><div class="kpi-sub">SME 13.31% · TTS 9.92% · Shopee 8.48%</div></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
-    <div class="table-wrap"><table id="t5"></table></div>
-  </div>
-</div>
-
-<div class="page" id="p6">
-  <div class="page-header">
-    <div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
-    <div class="page-meta"><span class="tag tag-orange">📅 20/06/2026</span><span>42 bưu cục — sắp xếp theo %FD giảm dần</span></div>
-  </div>
-  <div class="card">
-    <div class="card-header"><div class="card-title"><div class="card-icon">📮</div>FD Hoàn Theo Bưu Cục</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
-    <div class="table-wrap"><table id="t6"></table></div>
-  </div>
-</div>
-
+  <div class="page active" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+  <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
+
 <script>
-const SELF='Phạm Đức Thắng';
-function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');}
+const SELF = 'Phạm Đức Thắng';
+const SID  = '1zNYw6PMBa_hNxnfyREstfg-L78djDNym0rMU-LXzicg';
+
+const SHEETS = {
+  vanHanh:  { name:'VẬN HÀNH AM',              range:'A1:F33' },
+  bcGiao:   { name:'BƯU CỤC-GIAO',             range:'A1:F33' },
+  gtcTTS:   { name:'GTC TTS',                  range:'A1:F33' },
+  ontime:   { name:'AM-ONTIME TTS',            range:'A1:F33' },
+  fdAM:     { name:'FD( tỉ lệ trả) - AM',      range:'A1:E24' },
+  fdBC:     { name:'FD( tỉ lệ trả) - Bưu Cục',range:'A1:G98' },
+};
+
+function sheetURL(sheetName, range) {
+  return `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${range}`;
+}
+
+function parseCSV(text) {
+  return text.trim().split('\n').filter(l=>l.trim()).map(line=>{
+    const cols=[]; let cur='', inQ=false;
+    for(const c of line){
+      if(c==='"') inQ=!inQ;
+      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
+      else cur+=c;
+    }
+    cols.push(cur.trim());
+    return cols;
+  });
+}
+
+async function fetchSheet(sheetName, range) {
+  const res = await fetch(sheetURL(sheetName, range));
+  if(!res.ok) throw new Error(`HTTP ${res.status}`);
+  return parseCSV(await res.text());
+}
+
+// ── HELPERS ──
+function show(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
 function gc(v,g,m){const n=parseFloat(v);if(isNaN(n))return'';return n>=g?'g':n>=m?'m':'b';}
 function fd(v){const n=parseFloat(v);if(isNaN(n))return'';return n<=8?'g':n<=12?'m':'b';}
 function bar(pct,cls){const w=Math.min(100,parseFloat(pct)||0);return`<div class="bw"><div class="bgr"><div class="bf ${cls}" style="width:${w}%"></div></div><span class="bv">${pct}</span></div>`;}
@@ -185,37 +182,421 @@ function am(n){return n.includes(SELF)?`<span class="am-self">⭐ ${n}</span>`:n
 function rk(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return`<div class="rank ${c}">${i+1}</div>`;}
 function bg(v,g,m){return`<span class="pct ${gc(v,g,m)}">${v}</span>`;}
 function fb(v){return`<span class="pct ${fd(v)}">${v}</span>`;}
-function mkTable(id,heads,rows,totRow){
-  const t=document.getElementById(id);
+
+function mkTable(heads,rows,totRow){
+  const t=document.createElement('table');
   t.innerHTML=`<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody></tbody>`;
   const tb=t.querySelector('tbody');
   rows.forEach(r=>tb.appendChild(r));
   if(totRow)tb.appendChild(totRow);
+  return t;
 }
 
-// P1
-const d1=[["Đỗ Phú Duyên","4,347","74.86%","353","7.65%"],["Vũ Văn Vinh","9,178","92.37%","505","69.50%"],["Vi Văn Trịnh","3,207","98.29%","195","42.56%"],["Trương Ngọc Nên","3,127","92.01%","506","14.43%"],["Triệu Ngọc Duy","3,780","89.13%","52","55.77%"],["Phạm Đức Thắng, Đỗ Phú Duyên","391","86.19%","12","8.33%"],["Phạm Đức Thắng","4,059","90.84%","175","30.86%"],["Nguyễn Văn Đạt","2,612","85.11%","440","13.18%"],["Nguyễn Văn Thắng","2,444","90.51%","152","33.55%"],["Nguyễn Văn Quang","3,463","88.07%","292","39.73%"],["Nguyễn Phú Hưởng","3,371","93.56%","673","20.36%"],["Nguyễn Lâm Thảo","3,374","66.15%","193","15.03%"],["Nguyễn Bá Tuấn","5,262","92.13%","169","24.85%"],["Lê Văn Lâm","2,929","95.70%","346","33.53%"],["Kiều Văn Nam","10,272","96.52%","2,113","30.76%"],["Hoàng Tấn Dũng","3,492","88.86%","301","55.15%"],["Chu Mạnh Dũng","2,892","95.02%","841","61.47%"],["Cao Xuân Minh","4,033","99.11%","655","78.32%"],["Cao Văn Đức, Chu Mạnh Dũng","751","61.38%","257","8.56%"],["Cao Văn Đức","3,333","95.53%","151","84.77%"],["Bùi Xuân Quang","5,686","96.71%","178","69.66%"]];
-(()=>{const rows=d1.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td><strong>${r[1]}</strong></td><td>${bar(r[2],'bo')}</td><td>${r[3]}</td><td>${bar(r[4],'bo')}</td>`;return tr;});const tot=document.createElement('tr');tot.className='tot';tot.innerHTML=`<td colspan="2">Grand Total</td><td><strong>82,003</strong></td><td>${bar('90.95%','bo')}</td><td><strong>8,559</strong></td><td>${bar('38.40%','bo')}</td>`;mkTable('t1',['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2'],rows,tot);})();
+function setPage(id, html) {
+  document.getElementById(id).innerHTML = html;
+}
 
-// P2
-const d2=[["Cao Văn Đức, Chu Mạnh Dũng","Bưu Cục Đặng Châu Tuệ - Cao Xanh - Hạ Long - Quảng Ninh","751","61.4%","45.01%"],["Nguyễn Lâm Thảo","Bưu Cục Thôn Nam Hòa - An Dương - Hải Phòng","767","15.9%","11.21%"],["Chu Mạnh Dũng","Bưu Cục Đảo Vân Đồn - Quảng Ninh","257","56.4%","45.14%"],["Nguyễn Văn Đạt","Bưu Cục Gia Đông - Thuận Thành - Bắc Ninh","1,402","73.3%","57.85%"],["Nguyễn Văn Thắng","(HDU) Cẩm Giang","693","68.8%","55.12%"],["Phạm Đức Thắng, Đỗ Phú Duyên","Bưu Cục Xã Hương Lâm - Hiệp Hòa - Bắc Giang","391","86.2%","59.1%"],["Triệu Ngọc Duy","Bưu Cục Thị Trấn Nhã Nam - Tân Yên - Bắc Giang","408","66.9%","49.8%"],["Đỗ Phú Duyên","Bưu Cục Thôn Chùa - Việt Yên - Bắc Giang","1,615","78.0%","62.0%"],["Nguyễn Văn Quang","(HDU) Nam Sách","694","70.0%","56.1%"],["Nguyễn Phú Hưởng","Bưu Cục Cột 5 - Hạ Long - Quảng Ninh","654","91.6%","61.6%"],["Đỗ Phú Duyên","Bưu Cục Phố Bình Minh - Hiệp Hòa - Bắc Giang","1,008","70.8%","55.2%"],["Phạm Đức Thắng","Bưu Cục Tổ Dân Phố Đồng Lều - Yên Thế - Bắc Giang","319","58.3%","50.5%"],["Nguyễn Phú Hưởng","Bưu Cục 281 Nguyễn Trãi - Hạ Long - Quảng Ninh","573","85.5%","64.0%"],["Trương Ngọc Nên","(HDU) Tân Hưng","727","85.4%","71.0%"],["Kiều Văn Nam","Bưu Cục KĐT Nam Hồng - Từ Sơn - Bắc Ninh","967","87.6%","64.7%"],["Phạm Đức Thắng","Bưu Cục Thị Trấn Vôi - Lạng Giang - Bắc Giang","798","96.2%","66.4%"],["Nguyễn Bá Tuấn","Bưu Cục 105 Lũng Đông - Q.Hải An - Hải Phòng","1,423","80.9%","65.1%"],["Vũ Văn Vinh","Bưu Cục Thôn Xuân Sơn - An Thắng - An Lão - Hải Phòng","875","82.2%","67.4%"],["Kiều Văn Nam","Bưu Cục Chợ Ấp Đồn - Yên Trung - Yên Phong - Bắc Ninh","964","97.7%","70.3%"],["Vũ Văn Vinh","Bưu Cục Tổ 12 - Kênh Dương - Lê Chân - Hải Phòng","1,146","77.9%","61.6%"],["Kiều Văn Nam","Bưu Cục Đào Viên - Quế Võ - Bắc Ninh","695","88.2%","66.0%"],["Lê Văn Lâm","Bưu Cục 320 Đường Hùng Vương - Mai Pha - Lạng Sơn","784","91.8%","70.2%"],["Chu Mạnh Dũng","Điểm Xử Lý Hàng Huyện Đảo Cô Tô - Quảng Ninh","766","99.7%","58.4%"],["Đỗ Phú Duyên","Bưu Cục Tổ Dân Phố Vàng - Việt Yên - Bắc Giang","748","55.5%","43.2%"],["Nguyễn Lâm Thảo","Bưu Cục 16A An Toàn - Hoà Nghĩa - Dương Kinh - Hải Phòng","1,008","83.5%","71.7%"],["Nguyễn Lâm Thảo","Bưu Cục An Dương 2 - Hải Phòng","980","74.1%","62.4%"],["Phạm Đức Thắng","Bưu Cục Thị Trấn Đồi Ngô - Lục Nam - Bắc Giang","1,053","89.5%","69.7%"],["Hoàng Tấn Dũng","(HDU) Phú Thái","1,049","84.6%","66.7%"],["Nguyễn Bá Tuấn","Bưu Cục QL10 Chợ Tổng - Thủy Nguyên - Hải Phòng","1,373","93.0%","70.4%"],["Đỗ Phú Duyên","Bưu Cục Tổ Dân Phố Minh Phượng - Nham Biền - Bắc Giang","976","88.7%","70.8%"],["Triệu Ngọc Duy","Bưu Cục Tổ Dân Phố Mới QL31 - Phường Chũ - Bắc Giang","1,136","83.6%","66.0%"]];
-(()=>{const rows=d2.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';const gcls=gc(r[4],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td style="font-size:11px">${r[1]}</td><td><strong>${r[2]}</strong></td><td>${bar(r[3],'bo')}</td><td>${bar(r[4],bc)}</td>`;return tr;});mkTable('t2',['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC'],rows,null);})();
+function errPage(msg) {
+  return `<div class="error-box">⚠️ Không thể tải dữ liệu: ${msg}<br><small>Kiểm tra kết nối mạng hoặc quyền truy cập Google Sheet.</small></div>`;
+}
 
-// P3
-const d3=[["Đỗ Phú Duyên","1,308","76.45%","63.76%","108"],["Vũ Văn Vinh","1,514","92.14%","78.86%","79"],["Vi Văn Trịnh","571","98.07%","85.64%","36"],["Trương Ngọc Nên","631","91.13%","80.19%","126"],["Triệu Ngọc Duy","942","87.69%","76.33%","17"],["Phạm Đức Thắng, Đỗ Phú Duyên","129","86.05%","65.12%","5"],["Phạm Đức Thắng","978","92.02%","74.23%","44"],["Nguyễn Văn Đạt","529","86.20%","73.16%","109"],["Nguyễn Văn Thắng","493","90.06%","73.83%","40"],["Nguyễn Văn Quang","620","90.65%","78.55%","54"],["Nguyễn Phú Hưởng","695","94.68%","77.12%","158"],["Nguyễn Lâm Thảo","684","66.08%","52.92%","39"],["Nguyễn Bá Tuấn","1,021","93.34%","77.38%","31"],["Lê Văn Lâm","421","95.01%","79.57%","67"],["Kiều Văn Nam","2,371","97.05%","77.52%","529"],["Hoàng Tấn Dũng","598","86.96%","73.41%","51"],["Chu Mạnh Dũng","422","96.21%","72.27%","123"],["Cao Xuân Minh","734","99.05%","84.33%","93"],["Cao Văn Đức, Chu Mạnh Dũng","182","67.03%","53.30%","74"],["Cao Văn Đức","641","93.29%","79.25%","19"],["Bùi Xuân Quang","913","96.60%","83.35%","24"]];
-(()=>{const rows=d3.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td><strong>${r[1]}</strong></td><td>${bar(r[2],'bo')}</td><td>${bg(r[3],80,70)}</td><td>${r[4]}</td>`;return tr;});const tot=document.createElement('tr');tot.className='tot';tot.innerHTML=`<td colspan="2">Grand Total</td><td><strong>16,397</strong></td><td>${bar('90.55%','bo')}</td><td>${bg('75.50%',80,70)}</td><td>1,826</td>`;mkTable('t3',['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],rows,tot);})();
+// ── BUILD PAGES ──
+function buildVanHanh(rows) {
+  // rows[0] = header, skip; find grand total row
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[0]!=='');
+  const totRow = data.find(r=>!r[0].match(/^\d+$/));
+  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
 
-// P4
-const d4=[["Phạm Đức Thắng, Đỗ Phú Duyên","211","67.30%","142"],["Cao Văn Đức, Chu Mạnh Dũng","284","62.68%","178"],["Lê Văn Lâm","478","88.08%","421"],["Chu Mạnh Dũng","512","84.96%","435"],["Nguyễn Văn Thắng","532","86.84%","462"],["Vi Văn Trịnh","545","90.09%","491"],["Nguyễn Lâm Thảo","593","86.34%","512"],["Nguyễn Văn Đạt","607","90.61%","550"],["Cao Văn Đức","663","91.55%","607"],["Nguyễn Văn Quang","682","89.30%","609"],["Hoàng Tấn Dũng","746","83.11%","620"],["Trương Ngọc Nên","768","88.80%","682"],["Nguyễn Phú Hưởng","862","83.41%","719"],["Cao Xuân Minh","864","92.13%","796"],["Bùi Xuân Quang","881","93.42%","823"],["Phạm Đức Thắng","968","92.36%","894"],["Triệu Ngọc Duy","998","93.89%","937"],["Nguyễn Bá Tuấn","1,041","93.76%","976"],["Vũ Văn Vinh","1,423","96.56%","1,374"],["Đỗ Phú Duyên","1,483","89.41%","1,326"],["Kiều Văn Nam","2,983","90.18%","2,690"]];
-(()=>{const rows=d4.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td><strong>${r[1]}</strong></td><td>${bg(r[2],90,80)}</td><td>${r[3]}</td>`;return tr;});const tot=document.createElement('tr');tot.className='tot';tot.innerHTML=`<td colspan="2">Grand Total</td><td><strong>18,124</strong></td><td>${bg('89.63%',90,80)}</td><td><strong>16,244</strong></td>`;mkTable('t4',['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],rows,tot);})();
+  const vol1All = dataRows.map(r=>parseInt((r[2]||'').replace(/,/g,''))||0);
+  const maxVol1 = Math.max(...vol1All);
+  const maxAM = dataRows.find(r=>(parseInt((r[2]||'').replace(/,/g,''))||0)===maxVol1);
+  const maxGan = dataRows.reduce((a,b)=>parseFloat(b[3])>parseFloat(a[3])?b:a, dataRows[0]);
+  const totalVol1 = totRow?totRow[2]:'—';
+  const totalPct1 = totRow?totRow[3]:'—';
+  const totalVol2 = totRow?totRow[4]:'—';
 
-// P5
-const d5=[["Chu Mạnh Dũng, Cao Văn Đức","29.59%","23.43%","40.75%","18.67%"],["Nguyễn Văn Đạt","15.77%","16.52%","18.42%","14.00%"],["Phạm Đức Thắng","12.97%","13.31%","9.92%","8.48%"],["Nguyễn Lâm Thảo","12.25%","15.13%","20.80%","6.89%"],["Đỗ Phú Duyên","12.22%","12.53%","16.16%","8.14%"],["Đỗ Phú Duyên, Phạm Đức Thắng","11.72%","15.87%","6.90%","9.09%"],["Kiều Văn Nam","10.99%","15.17%","11.76%","8.22%"],["Nguyễn Bá Tuấn","10.91%","11.18%","9.66%","11.39%"],["Triệu Ngọc Duy","10.32%","12.10%","9.85%","8.28%"],["Hoàng Tấn Dũng","10.28%","13.52%","10.04%","7.22%"],["Cao Văn Đức","9.63%","11.56%","8.67%","7.83%"],["Nguyễn Văn Thắng","9.44%","10.86%","11.18%","7.74%"],["Trương Ngọc Nên","8.84%","12.39%","7.43%","6.16%"],["Lê Văn Lâm","7.73%","9.45%","7.65%","6.35%"],["Nguyễn Phú Hưởng","7.72%","8.14%","5.78%","8.31%"],["Vi Văn Trịnh","7.69%","7.86%","5.77%","8.04%"],["Vũ Văn Vinh","7.28%","10.03%","8.28%","4.20%"],["Nguyễn Văn Quang","7.12%","9.00%","8.01%","5.47%"],["Chu Mạnh Dũng","7.11%","9.88%","8.90%","4.83%"],["Cao Xuân Minh","6.65%","8.01%","7.85%","4.86%"],["Bùi Xuân Quang","6.45%","8.37%","6.80%","4.36%"]];
-(()=>{const rows=d5.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td>${fb(r[1])}</td><td>${fb(r[2])}</td><td>${fb(r[3])}</td><td>${fb(r[4])}</td>`;return tr;});const tot=document.createElement('tr');tot.className='tot';tot.innerHTML=`<td colspan="2">TOTAL</td><td>${fb('9.80%')}</td><td>${fb('11.90%')}</td><td>${fb('11.30%')}</td><td>${fb('7.20%')}</td>`;mkTable('t5',['#','AM','FD Total','SME (COD)','TTS','Shopee'],rows,tot);})();
+  const tableRows = dataRows.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if(r[1]&&r[1].includes(SELF)) tr.className='hl';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'0%','bo')}</td><td>${r[4]||''}</td><td>${bar(r[5]||'0%','bo')}</td>`;
+    return tr;
+  });
+  if(totRow){
+    const tr=document.createElement('tr');tr.className='tot';
+    tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td>`;
+    tableRows.push(tr);
+  }
+  const table = mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2'],tableRows,null);
 
-// P6
-const d6=[["Chu Mạnh Dũng, Cao Văn Đức","Bưu Cục Đặng Châu Tuệ - Cao Xanh - Hạ Long - Quảng Ninh","29.59%","23.43%","40.75%","18.67%"],["Nguyễn Văn Đạt","Bưu Cục Gia Đông - Thuận Thành - Bắc Ninh","22.70%","23.02%","29.27%","19.92%"],["Kiều Văn Nam","Bưu Cục Chợ Ấp Đồn - Yên Trung - Yên Phong - Bắc Ninh","17.42%","21.46%","15.98%","17.24%"],["Nguyễn Bá Tuấn","Bưu Cục QL10 Chợ Tổng - Thủy Nguyên - Hải Phòng","17.30%","17.30%","12.10%","20.24%"],["Đỗ Phú Duyên","Bưu Cục Thôn Chùa - Việt Yên - Bắc Giang","17.22%","12.26%","22.66%","13.42%"],["Phạm Đức Thắng","Bưu Cục Thị Trấn Vôi - Lạng Giang - Bắc Giang","16.54%","15.65%","12.83%","17.70%"],["Phạm Đức Thắng","Bưu Cục Thị Trấn Đồi Ngô - Lục Nam - Bắc Giang","16.24%","17.07%","20.20%","6.48%"],["Triệu Ngọc Duy","Bưu Cục Thị Trấn Nhã Nam - Tân Yên - Bắc Giang","16.19%","15.49%","20.16%","12.00%"],["Nguyễn Lâm Thảo","Bưu Cục 16A An Toàn - Hoà Nghĩa - Dương Kinh - Hải Phòng","15.70%","15.74%","15.93%","15.73%"],["Vũ Văn Vinh","Bưu Cục Tổ 12 - Kênh Dương - Lê Chân - Hải Phòng","14.07%","18.58%","9.63%","8.11%"],["Nguyễn Lâm Thảo","Bưu Cục An Dương 2 - Hải Phòng","13.90%","19.25%","23.00%","5.65%"],["Nguyễn Bá Tuấn","Bưu Cục 105 Lũng Đông - Q.Hải An - Hải Phòng","13.54%","17.46%","15.59%","10.17%"],["Kiều Văn Nam","Bưu Cục KĐT Thị Trấn Chờ - Yên Phong - Bắc Ninh","12.63%","15.77%","14.29%","9.89%"],["Kiều Văn Nam","Bưu Cục KĐT Nam Hồng - Từ Sơn - Bắc Ninh","12.33%","16.90%","11.72%","10.27%"],["Trương Ngọc Nên","(HDU) Tân Hưng","12.32%","17.13%","6.98%","6.40%"],["Phạm Đức Thắng","Bưu Cục Tổ Dân Phố Đồng Lều - Yên Thế - Bắc Giang","12.28%","24.44%","4.65%","4.76%"],["Nguyễn Văn Thắng","(HDU) Cẩm Giang","12.02%","12.12%","15.09%","11.00%"],["Nguyễn Văn Quang","(HDU) Nam Sách","11.82%","10.51%","17.59%","10.03%"],["Vũ Văn Vinh","Bưu Cục Thôn Xuân Sơn - An Thắng - An Lão - Hải Phòng","11.81%","10.66%","14.57%","9.17%"],["Đỗ Phú Duyên, Phạm Đức Thắng","Bưu Cục Xã Hương Lâm - Hiệp Hòa - Bắc Giang","11.72%","15.87%","6.90%","9.09%"],["Hoàng Tấn Dũng","(HDU) Phú Thái","11.54%","13.30%","14.67%","9.62%"],["Kiều Văn Nam","Bưu Cục Khu Sơn Đông - Phường Nam Sơn - Bắc Ninh","11.29%","9.72%","11.53%","11.96%"],["Kiều Văn Nam","Bưu Cục Mao Trung - Phượng Mao - Quế Võ - Bắc Ninh","11.28%","14.17%","15.38%","6.95%"],["Nguyễn Văn Thắng","(HDU) Tứ Minh","10.99%","12.65%","13.31%","8.21%"],["Nguyễn Phú Hưởng","Bưu Cục 281 Nguyễn Trãi - Hạ Long - Quảng Ninh","10.80%","11.47%","9.09%","10.57%"],["Triệu Ngọc Duy","Bưu Cục Tổ Dân Phố Mới QL31 - Phường Chũ - Bắc Giang","10.64%","14.95%","7.85%","9.46%"],["Kiều Văn Nam","Bưu Cục Thôn Bất Lự - Hoàn Sơn - Tiên Du - Bắc Ninh","10.62%","13.52%","11.98%","8.26%"],["Vi Văn Trịnh","Bưu Cục 12 Nguyễn Thị Minh Khai - Bắc Sơn - Lạng Sơn","10.40%","10.97%","6.02%","11.11%"],["Bùi Xuân Quang","Bưu Cục An Dương - Hải Phòng","10.39%","10.83%","10.53%","8.53%"],["Đỗ Phú Duyên","Bưu Cục Phố Bình Minh - Hiệp Hòa - Bắc Giang","10.20%","—","—","—"],["Nguyễn Lâm Thảo","Bưu Cục 1056 Nguyễn Bỉnh Khiêm - Q.Hải An - Hải Phòng","8.75%","14.43%","18.80%","1.18%"],["Phạm Đức Thắng","Bưu Cục TL 293 Xóm Rén - Xã Trường Sơn - Bắc Giang","8.66%","14.50%","7.44%","4.69%"],["Trương Ngọc Nên","(HDU) Thanh Hà","8.59%","10.40%","10.23%","6.25%"],["Vi Văn Trịnh","Bưu Cục Lộc Bình - Lạng Sơn","8.26%","8.56%","7.27%","8.51%"],["Cao Xuân Minh","Bưu Cục 228 Nguyễn Bình - Quảng Yên - Quảng Ninh","8.18%","8.24%","12.88%","6.24%"],["Kiều Văn Nam","Bưu Cục Lý Quốc Sư - Võ Cường - Bắc Ninh","8.15%","14.34%","10.22%","3.10%"],["Nguyễn Phú Hưởng","Bưu Cục Thôn Thác Bưởi - Xã Tiên Yên - Quảng Ninh","8.03%","7.65%","8.93%","8.64%"],["Trương Ngọc Nên","(HDU) Gia Lộc","8.01%","12.54%","4.81%","5.99%"],["Phạm Đức Thắng","Bưu Cục 215 Đề Nắm - Yên Thế - Bắc Giang","7.98%","13.21%","5.81%","3.55%"],["Cao Xuân Minh","Bưu Cục 132 Quang Trung - Uông Bí - Quảng Ninh","7.82%","9.54%","6.74%","6.68%"],["Vi Văn Trịnh","Bưu Cục Thị Trấn Bình Gia - Bình Gia - Lạng Sơn","7.69%","3.74%","8.70%","10.40%"],["Nguyễn Phú Hưởng","Bưu Cục 144 Trần Phú - Xã Đầm Hà - Quảng Ninh","3.46%","6.14%","1.41%","2.21%"]];
-(()=>{const rows=d6.map((r,i)=>{const tr=document.createElement('tr');if(r[0].includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0])}</td><td style="font-size:11px">${r[1]}</td><td>${fb(r[2])}</td><td>${fb(r[3])}</td><td>${fb(r[4])}</td><td>${fb(r[5])}</td>`;return tr;});mkTable('t6',['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],rows,null);})();
+  return `
+    <div class="page-header">
+      <div class="page-title">Báo Cáo Vận Hành Theo AM</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dataRows.length} AMs · Tổng: ${totalVol1} đơn Ca1</span></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Tổng Ca 1</div><div class="kpi-value">${totalVol1}</div><div class="kpi-sub">%Gán TB: ${totalPct1}</div></div>
+      <div class="kpi"><div class="kpi-label">Tổng Ca 2</div><div class="kpi-value">${totalVol2}</div><div class="kpi-sub">%Gán TB: ${totRow?totRow[5]:'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">Volume Cao Nhất</div><div class="kpi-value" style="font-size:14px;padding-top:4px">${maxAM?maxAM[1]:'—'}</div><div class="kpi-sub">${maxVol1.toLocaleString()} đơn · ${maxAM?maxAM[3]:'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">%Gán Ca1 Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxGan?maxGan[3]:'—'}</div><div class="kpi-sub">${maxGan?maxGan[1]:'—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+function buildBCGiao(rows) {
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
+  const tableRows = data.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if((r[1]||'').includes(SELF)) tr.className='hl';
+    const gcls=gc(r[5],70,60);
+    const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'0%','bo')}</td><td>${bar(r[5]||'0%',bc)}</td>`;
+    return tr;
+  });
+  const table = mkTable(['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC'],tableRows,null);
+
+  return `
+    <div class="page-header">
+      <div class="page-title">GTC Theo Bưu Cục</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Hiệu Suất GTC Bưu Cục</div><div class="card-info">%GTC: Xanh ≥70% · Vàng 60–70% · Đỏ &lt;60%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+function buildGTCTTS(rows) {
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
+  const totRow = data.find(r=>!r[0].match(/^\d+$/));
+  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+
+  const maxGTC = dataRows.reduce((a,b)=>parseFloat(b[4])>parseFloat(a[4])?b:a,dataRows[0]||['','','','','']);
+  const minGTC = dataRows.reduce((a,b)=>parseFloat(b[4])<parseFloat(a[4])?b:a,dataRows[0]||['','','','','']);
+
+  const tableRows = dataRows.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if((r[1]||'').includes(SELF)) tr.className='hl';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'0%','bo')}</td><td>${bg(r[4]||'0%',80,70)}</td><td>${r[5]||''}</td>`;
+    return tr;
+  });
+  if(totRow){
+    const tr=document.createElement('tr');tr.className='tot';
+    tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;
+    tableRows.push(tr);
+  }
+  const table = mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],tableRows,null);
+
+  return `
+    <div class="page-header">
+      <div class="page-title">GTC TTS Theo AM</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>Tổng: ${totRow?totRow[2]:'—'} · %GTC TB: ${totRow?totRow[4]:'—'}</span></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Tổng Ca 1 TTS</div><div class="kpi-value">${totRow?totRow[2]:'—'}</div><div class="kpi-sub">%Gán: ${totRow?totRow[3]:'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">%GTC Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥80%</div></div>
+      <div class="kpi"><div class="kpi-label">GTC Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxGTC[4]||'—'}</div><div class="kpi-sub">${maxGTC[1]||'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">GTC Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${minGTC[4]||'—'}</div><div class="kpi-sub">${minGTC[1]||'—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Tỉ Lệ GTC TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+function buildOntime(rows) {
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[1]&&r[1].trim());
+  const totRow = data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
+  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+
+  const maxOn = dataRows.reduce((a,b)=>parseFloat(b[4])>parseFloat(a[4])?b:a,dataRows[0]||[]);
+  const minOn = dataRows.reduce((a,b)=>parseFloat(b[4])<parseFloat(a[4])?b:a,dataRows[0]||[]);
+
+  const tableRows = dataRows.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if((r[1]||'').includes(SELF)) tr.className='hl';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'0%',90,80)}</td><td>${r[5]||''}</td>`;
+    return tr;
+  });
+  if(totRow){
+    const tr=document.createElement('tr');tr.className='tot';
+    tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;
+    tableRows.push(tr);
+  }
+  const dateLabel = dataRows[0]?dataRows[0][2]:'Ngày hiện tại';
+
+  return `
+    <div class="page-header">
+      <div class="page-title">Ontime TTS Theo AM</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 ${dateLabel}</span><span>Tổng: ${totRow?totRow[3]:'—'} · %Ontime TB: ${totRow?totRow[4]:'—'}</span></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Tổng Vol GTC</div><div class="kpi-value">${totRow?totRow[3]:'—'}</div><div class="kpi-sub">Vol đúng hạn: ${totRow?totRow[5]:'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">%Ontime TB</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥90%</div></div>
+      <div class="kpi"><div class="kpi-label">Ontime Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxOn[4]||'—'}</div><div class="kpi-sub">${maxOn[1]||'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">Ontime Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${minOn[4]||'—'}</div><div class="kpi-sub">${minOn[1]||'—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>Ontime TTS Ngày</div><div class="card-info">%Ontime: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+function buildFDAM(rows) {
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
+  const totRow = data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
+  const dataRows = data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL'));
+
+  const selfRow = dataRows.find(r=>(r[0]||'').includes(SELF));
+  const maxFD = dataRows.reduce((a,b)=>parseFloat(b[1])>parseFloat(a[1])?b:a,dataRows[0]||[]);
+  const minFD = dataRows.reduce((a,b)=>parseFloat(b[1])<parseFloat(a[1])?b:a,dataRows[0]||[]);
+
+  const tableRows = dataRows.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if((r[0]||'').includes(SELF)) tr.className='hl';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;
+    return tr;
+  });
+  if(totRow){
+    const tr=document.createElement('tr');tr.className='tot';
+    tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;
+    tableRows.push(tr);
+  }
+
+  return `
+    <div class="page-header">
+      <div class="page-title">Tỉ Lệ Hoàn (FD) Theo AM</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>TOTAL: ${totRow?totRow[1]:'—'} · SME: ${totRow?totRow[2]:'—'} · TTS: ${totRow?totRow[3]:'—'} · Shopee: ${totRow?totRow[4]:'—'}</span></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[1]:'—'}</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
+      <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">${maxFD[1]||'—'}</div><div class="kpi-sub">${maxFD[0]||'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">${minFD[1]||'—'}</div><div class="kpi-sub">${minFD[0]||'—'}</div></div>
+      <div class="kpi"><div class="kpi-label">⭐ Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${selfRow?selfRow[1]:'—'}</div><div class="kpi-sub">SME ${selfRow?selfRow[2]:'—'} · TTS ${selfRow?selfRow[3]:'—'} · Shopee ${selfRow?selfRow[4]:'—'}</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+function buildFDBC(rows) {
+  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim());
+  const tableRows = data.map((r,i)=>{
+    const tr=document.createElement('tr');
+    if((r[1]||'').includes(SELF)) tr.className='hl';
+    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;
+    return tr;
+  });
+  const table = mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],tableRows,null);
+
+  return `
+    <div class="page-header">
+      <div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
+      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục — sắp xếp theo %FD giảm dần</span></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title"><div class="card-icon">📮</div>FD Hoàn Theo Bưu Cục</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
+      <div class="table-wrap"></div>
+    </div>`;
+}
+
+// ── MAIN LOADER ──
+async function loadAll() {
+  const btn = document.getElementById('refreshBtn');
+  const spin = document.getElementById('spinIcon');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+
+  // show loading on all pages
+  document.querySelectorAll('.page').forEach(p=>{
+    p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div>';
+  });
+
+  const builders = [
+    { id:'p1', key:'vanHanh', build: buildVanHanh },
+    { id:'p2', key:'bcGiao',  build: buildBCGiao  },
+    { id:'p3', key:'gtcTTS',  build: buildGTCTTS  },
+    { id:'p4', key:'ontime',  build: buildOntime  },
+    { id:'p5', key:'fdAM',    build: buildFDAM    },
+    { id:'p6', key:'fdBC',    build: buildFDBC    },
+  ];
+
+  await Promise.all(builders.map(async ({id, key, build}) => {
+    try {
+      const sheet = SHEETS[key];
+      const rows = await fetchSheet(sheet.name, sheet.range);
+      const html = build(rows);
+      const el = document.getElementById(id);
+      el.innerHTML = html;
+      // attach table to .table-wrap
+      const wrap = el.querySelector('.table-wrap');
+      if(wrap) {
+        const tableRows = Array.from(el.querySelectorAll('tr[class]')||[]);
+        // rebuild table from the rows already in DOM — simpler: just redo
+        attachTable(id, rows, build);
+      }
+    } catch(e) {
+      document.getElementById(id).innerHTML = errPage(e.message);
+    }
+  }));
+
+  btn.classList.remove('spinning');
+  btn.disabled = false;
+  const now = new Date();
+  document.getElementById('lastUpdate').textContent =
+    `Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+}
+
+// cleaner approach: build HTML string then append real table element
+async function loadPage(id, sheetName, range, buildFn) {
+  try {
+    const rows = await fetchSheet(sheetName, range);
+    const el = document.getElementById(id);
+    el.innerHTML = buildFn(rows);
+    // now rebuild actual table element and append to .table-wrap
+    buildTableElement(id, rows, buildFn);
+  } catch(e) {
+    document.getElementById(id).innerHTML = errPage(e.message);
+  }
+}
+
+function buildTableElement(id, rows, buildFn) {
+  // the build functions return HTML with empty .table-wrap divs
+  // we need to fill them with real table elements
+  const el = document.getElementById(id);
+  const wrap = el.querySelector('.table-wrap');
+  if(!wrap) return;
+  // dispatch to correct table builder
+  const tableEl = buildTableForPage(id, rows);
+  if(tableEl) wrap.appendChild(tableEl);
+}
+
+function buildTableForPage(id, rows) {
+  const data = rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
+
+  if(id==='p1') {
+    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+    const totRow = data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
+    const trs = dataRows.map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[1]||'').includes(SELF)) tr.className='hl';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${r[4]||''}</td><td>${bar(r[5]||'','bo')}</td>`;
+      return tr;
+    });
+    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td>`;trs.push(tr);}
+    return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2'],trs,null);
+  }
+  if(id==='p2') {
+    const trs = data.filter(r=>r[0]&&r[0].trim()).map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[1]||'').includes(SELF)) tr.className='hl';
+      const gcls=gc(r[5],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'','bo')}</td><td>${bar(r[5]||'',bc)}</td>`;
+      return tr;
+    });
+    return mkTable(['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC'],trs,null);
+  }
+  if(id==='p3') {
+    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+    const totRow = data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
+    const trs = dataRows.map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[1]||'').includes(SELF)) tr.className='hl';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;
+      return tr;
+    });
+    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;trs.push(tr);}
+    return mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],trs,null);
+  }
+  if(id==='p4') {
+    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+    const totRow = data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
+    const trs = dataRows.map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[1]||'').includes(SELF)) tr.className='hl';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'',90,80)}</td><td>${r[5]||''}</td>`;
+      return tr;
+    });
+    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;trs.push(tr);}
+    return mkTable(['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],trs,null);
+  }
+  if(id==='p5') {
+    const dataRows = data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL')&&r[0].trim());
+    const totRow = data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
+    const trs = dataRows.map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[0]||'').includes(SELF)) tr.className='hl';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;
+      return tr;
+    });
+    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;trs.push(tr);}
+    return mkTable(['#','AM','FD Total','SME (COD)','TTS','Shopee'],trs,null);
+  }
+  if(id==='p6') {
+    const trs = data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{
+      const tr=document.createElement('tr');
+      if((r[1]||'').includes(SELF)) tr.className='hl';
+      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;
+      return tr;
+    });
+    return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs,null);
+  }
+}
+
+// ── INIT: load all pages simultaneously ──
+async function init() {
+  const configs = [
+    { id:'p1', key:'vanHanh', build: buildVanHanh },
+    { id:'p2', key:'bcGiao',  build: buildBCGiao  },
+    { id:'p3', key:'gtcTTS',  build: buildGTCTTS  },
+    { id:'p4', key:'ontime',  build: buildOntime  },
+    { id:'p5', key:'fdAM',    build: buildFDAM    },
+    { id:'p6', key:'fdBC',    build: buildFDBC    },
+  ];
+
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+
+  await Promise.all(configs.map(async ({id, key, build}) => {
+    try {
+      const {name, range} = SHEETS[key];
+      const rows = await fetchSheet(name, range);
+      const el = document.getElementById(id);
+      el.innerHTML = build(rows);
+      const wrap = el.querySelector('.table-wrap');
+      if(wrap) {
+        const tbl = buildTableForPage(id, rows);
+        if(tbl) wrap.appendChild(tbl);
+      }
+    } catch(e) {
+      document.getElementById(id).innerHTML = errPage(e.message);
+    }
+  }));
+
+  btn.classList.remove('spinning');
+  btn.disabled = false;
+  const now = new Date();
+  document.getElementById('lastUpdate').textContent =
+    `Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+}
+
+// override loadAll to use init logic
+loadAll = async function() {
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  btn.disabled = true;
+  document.querySelectorAll('.page').forEach(p=>{
+    p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';
+  });
+  await init();
+};
+
+// start on load
+init();
 </script>
 </body>
 </html>
