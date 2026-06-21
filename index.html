@@ -196,7 +196,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="nav-section">Phân tích</div>
  <button class="nav-item" onclick="show('p7',this)"><span class="icon">📊</span>GTC Giao / Hàng AM</button>
  <div class="nav-section">Từ GHN Report</div>
- <button class="nav-item" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày</button>
+ <button class="nav-item" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày theo AM</button>
+ <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -212,6 +213,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p8"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p9"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -250,6 +252,9 @@ function errPage(msg){return`<div class="error-box">⚠️ Không thể tải d�
 // === XỬ LÝ THÀNH CÔNG (p8) ===
 const SHEET_XL_A='1fXqMj-SnBaR-LXeCgEKSQRqvwChayO_fEPojzgxFejM';
 const SHEET_XL_B='1vzA8eugWZz8evIJBF4XiJq9rOve6q-7q6RXOL2YdMls';
+// Sheet Bưu Cục (cần điền ID sau khi xuất từ GHN Looker ở cấp BC)
+const SHEET_XL_C=''; // Lấy - BC
+const SHEET_XL_D=''; // Giao - BC
 async function fetchExtSheet(id,retry=2){
  for(let i=0;i<=retry;i++){
   try{
@@ -317,10 +322,71 @@ function buildXuLy(rowsA,rowsB){
  }
  const sectionA=buildSection(rowsA,5,'%LTC','Vol LTC',90,80);
  const sectionB=buildSection(rowsB,5,'%GTC','Vol GTC',65,50);
- return`<div class="page-header"><div class="page-title">Tổng Quan 7 Ngày Gần Nhất</div>
+ return`<div class="page-header"><div class="page-title">Tổng Quan 7 Ngày Theo AM</div>
   <div class="page-meta"><span class="tag tag-orange">📅 7 ngày gần nhất · Nguồn: GHN Looker</span><span>Chi tiết theo AM</span></div></div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📬</div>A. Báo Cáo Lấy Và Luân Chuyển Trong Ngày</div><div class="card-info">%LTC: Xanh ≥90% · Vàng ≥80% · Đỏ &lt;80%</div></div>${sectionA}</div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🚚</div>B. Báo Cáo Giao Trong Ngày</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${sectionB}</div>`;
+}
+
+// === TỔNG QUAN 7 NGÀY THEO BƯU CỤC (p9) ===
+function buildXuLyBC(rowsC,rowsD){
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
+ function buildSection(rows,mCol,mLabel,tcLabel,hiThr,midThr){
+  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const data=rows.slice(1).filter(r=>r[1]&&r[1].trim());
+  const bcRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b&&!b.includes('grand total')&&!b.includes('tổng số');});
+  const grandRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b.includes('grand total')||b.includes('tổng số');});
+  const allDates=[...new Set(bcRows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a)));
+  const dates7=allDates.slice(0,7).reverse();
+  if(!dates7.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ngày</p>';
+  const pivot={};
+  bcRows.forEach(r=>{
+   const amName=(r[0]||'').trim();
+   const bcName=(r[1]||'').trim();
+   const date=(r[2]||'').trim();
+   if(!bcName||!dates7.includes(date))return;
+   if(!pivot[bcName])pivot[bcName]={amName};
+   const vol=Math.round(pnG(r[3]));const pct=pnG(r[mCol])*100;
+   pivot[bcName][date]={vol,pct,volTC:Math.round(vol*pct/100)};
+  });
+  const grandPivot={};
+  grandRows.forEach(r=>{
+   const date=(r[2]||'').trim();
+   if(!dates7.includes(date))return;
+   const vol=Math.round(pnG(r[3]));const pct=pnG(r[mCol])*100;
+   grandPivot[date]={vol,pct,volTC:Math.round(vol*pct/100)};
+  });
+  const bcNames=Object.keys(pivot).sort();
+  let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="min-width:160px">Bưu Cục</th><th rowspan="2" style="min-width:110px">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:right">${tcLabel}</th><th style="text-align:center">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
+  bcNames.forEach(name=>{
+   const row=pivot[name];
+   html+=`<tr><td style="white-space:nowrap"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:12px">${row.amName||''}</td>`;
+   dates7.forEach(d=>{
+    const cell=row[d];
+    if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary)">${fmt(cell.volTC)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
+    else{html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td><td>—</td>`;}
+   });
+   html+='</tr>';
+  });
+  if(Object.keys(grandPivot).length){
+   html+=`<tr class="tot"><td colspan="2">Grand Total</td>`;
+   dates7.forEach(d=>{
+    const cell=grandPivot[d];
+    if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary)">${fmt(cell.volTC)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
+    else{html+=`<td style="border-left:1px solid #F3F4F6">—</td><td>—</td><td>—</td>`;}
+   });
+   html+='</tr>';
+  }
+  html+='</tbody></table></div>';
+  return html;
+ }
+ const sectionC=buildSection(rowsC,5,'%LTC','Vol LTC',90,80);
+ const sectionD=buildSection(rowsD,5,'%GTC','Vol GTC',65,50);
+ return`<div class="page-header"><div class="page-title">Tổng Quan 7 Ngày Theo Bưu Cục</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 7 ngày gần nhất · Nguồn: GHN Looker</span><span>Chi tiết theo Bưu Cục</span></div></div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📬</div>A. Báo Cáo Lấy Và Luân Chuyển Trong Ngày</div><div class="card-info">%LTC: Xanh ≥90% · Vàng ≥80% · Đỏ &lt;80%</div></div>${sectionC}</div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🚚</div>B. Báo Cáo Giao Trong Ngày</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${sectionD}</div>`;
 }
 
 // === GIAO OVERVIEW cho p1 ===
@@ -771,13 +837,19 @@ async function init(){
  // Fetch all sheets simultaneously (including external XL sheets)
  const rawData={};
  let xlA=null,xlB=null,xlErrA=null,xlErrB=null;
+ let xlC=null,xlD=null,xlErrC=null,xlErrD=null;
+ const xlFetches=[
+  fetchExtSheet(SHEET_XL_A).then(d=>xlA=d).catch(e=>xlErrA=e.message),
+  fetchExtSheet(SHEET_XL_B).then(d=>xlB=d).catch(e=>xlErrB=e.message),
+ ];
+ if(SHEET_XL_C)xlFetches.push(fetchExtSheet(SHEET_XL_C).then(d=>xlC=d).catch(e=>xlErrC=e.message));
+ if(SHEET_XL_D)xlFetches.push(fetchExtSheet(SHEET_XL_D).then(d=>xlD=d).catch(e=>xlErrD=e.message));
  await Promise.all([
   ...configs.map(async({id,key})=>{
    try{const{name,range}=SHEETS[key];rawData[key]=await fetchSheet(name,range);}
    catch(e){rawData[key]=null;rawData[key+'_err']=e.message;}
   }),
-  fetchExtSheet(SHEET_XL_A).then(d=>xlA=d).catch(e=>xlErrA=e.message),
-  fetchExtSheet(SHEET_XL_B).then(d=>xlB=d).catch(e=>xlErrB=e.message),
+  ...xlFetches,
  ]);
  // Build GTC TTS lookup map: amName → {pctGTC, volGTC} (used for p3 GTC TTS page)
  const gtcMap={};
@@ -822,14 +894,25 @@ async function init(){
   const p1el=document.getElementById('p1');
   if(p1el)p1el.insertAdjacentHTML('beforeend',buildGiaoOverview(xlB));
  }
- // Build p8 — XL Thành Công
+ // Build p8 — Tổng quan 7 ngày theo AM
  const p8el=document.getElementById('p8');
  if(xlErrA||xlErrB){
-  p8el.innerHTML=errPage(`Dữ liệu GHN Report: ${xlErrA||''} ${xlErrB||''}`.trim());
+  p8el.innerHTML=errPage(`Dữ liệu GHN Report (AM): ${xlErrA||''} ${xlErrB||''}`.trim());
  } else if(xlA&&xlB){
   p8el.innerHTML=buildXuLy(xlA,xlB);
  } else {
-  p8el.innerHTML=errPage('Chưa có dữ liệu — Sheet chưa được public hoặc chưa xuất.');
+  p8el.innerHTML=errPage('Chưa có dữ liệu AM — Sheet chưa được public hoặc chưa xuất.');
+ }
+ // Build p9 — Tổng quan 7 ngày theo Bưu Cục
+ const p9el=document.getElementById('p9');
+ if(!SHEET_XL_C||!SHEET_XL_D){
+  p9el.innerHTML=errPage('Chưa cấu hình Sheet Bưu Cục — hãy điền SHEET_XL_C và SHEET_XL_D.');
+ } else if(xlErrC||xlErrD){
+  p9el.innerHTML=errPage(`Dữ liệu GHN Report (BC): ${xlErrC||''} ${xlErrD||''}`.trim());
+ } else if(xlC&&xlD){
+  p9el.innerHTML=buildXuLyBC(xlC,xlD);
+ } else {
+  p9el.innerHTML=errPage('Chưa có dữ liệu Bưu Cục — Sheet chưa được public hoặc chưa xuất.');
  }
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
