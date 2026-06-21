@@ -587,24 +587,27 @@ window._D={};
 // === AI PAGE ===
 function buildAIPage(){
  const p12=document.getElementById('p12');
- const savedKey=localStorage.getItem('aiApiKey')||'';
  p12.innerHTML=`
  <div class="page-header">
   <div class="page-title">✨ AI - Phân Tích Tổng Quan</div>
   <div class="page-meta"><span class="tag tag-orange">🤖 Powered by Claude AI · Dữ liệu từ 4 dashboard</span></div>
  </div>
- <div class="card" style="margin-bottom:14px">
-  <div class="card-header"><div class="card-title"><div class="card-icon">🔑</div>Anthropic API Key</div></div>
-  <div class="ai-key-wrap">
-   <input type="password" class="ai-key-input" id="aiKeyInput" value="${savedKey}" placeholder="sk-ant-api03-...">
-   <button class="btn" onclick="saveAIKey()" style="background:var(--orange);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">Lưu Key</button>
-   <span class="ai-key-saved" id="aiKeySaved">${savedKey?'✅ Đã lưu':''}</span>
+ <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(91,33,182,0.04));border-color:rgba(124,58,237,0.2)">
+  <div style="display:flex;align-items:flex-start;gap:14px">
+   <div style="font-size:32px;line-height:1">🚀</div>
+   <div>
+    <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#A78BFA">Cách dùng — chỉ 2 bước:</div>
+    <div style="font-size:13px;color:var(--text);line-height:1.8">
+     <b>1.</b> Chọn loại phân tích hoặc tự nhập câu hỏi bên dưới<br>
+     <b>2.</b> Click <b>"Gửi sang Claude"</b> → tab claude.ai mở ra với dữ liệu đã điền sẵn → nhấn <b>Enter</b> là xong
+    </div>
+    <div style="margin-top:8px;font-size:11px;color:var(--text-sub)">💡 Bạn đang dùng Claude Pro — tính năng này dùng luôn tài khoản đó, không cần thêm gì.</div>
+   </div>
   </div>
-  <div style="margin-top:8px;font-size:11px;color:var(--text-sub)">Key được lưu trên máy bạn (localStorage), không gửi đi đâu ngoài Anthropic API. Lấy key tại <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--orange)">console.anthropic.com</a></div>
  </div>
  <div class="card">
   <div class="card-header"><div class="card-title"><div class="card-icon">💬</div>Nội dung phân tích</div></div>
-  <div style="margin-bottom:10px;font-size:12px;color:var(--text-sub)">Chọn nhanh hoặc tự nhập:</div>
+  <div style="margin-bottom:10px;font-size:12px;color:var(--text-sub)">Chọn nhanh:</div>
   <div class="ai-preset-row">
    <button class="ai-preset-btn" onclick="setAIPrompt('tong-quan')">📊 Tổng quan vận hành</button>
    <button class="ai-preset-btn" onclick="setAIPrompt('hl-ll')">🏆 Highlight / Lowlight</button>
@@ -612,26 +615,24 @@ function buildAIPage(){
    <button class="ai-preset-btn" onclick="setAIPrompt('tra-hang')">🔄 Phân tích tỉ lệ trả</button>
    <button class="ai-preset-btn" onclick="setAIPrompt('kien-nghi')">💡 Kiến nghị cải thiện</button>
   </div>
-  <textarea class="ai-textarea" id="aiPromptArea" placeholder="Ví dụ: Phân tích tổng quan hiệu suất vận hành tuần này, ai đang làm tốt nhất, ai cần cải thiện..."></textarea>
-  <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+  <textarea class="ai-textarea" id="aiPromptArea" placeholder="Hoặc tự nhập câu hỏi... Ví dụ: Ai đang làm tốt nhất tuần này? Ai cần cải thiện gấp?"></textarea>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
    <button class="ai-run-btn" id="aiRunBtn" onclick="runAIAnalysis()">
-    <span>✨</span><span>Phân tích ngay</span>
+    <span>🚀</span><span>Gửi sang Claude</span>
    </button>
    <span style="font-size:11px;color:var(--text-sub)" id="aiStatus"></span>
   </div>
  </div>
  <div class="card" id="aiResultCard" style="display:none">
-  <div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Kết quả phân tích</div>
-   <button onclick="copyAIResult()" style="background:none;border:1px solid var(--border);padding:5px 12px;border-radius:6px;color:var(--text-sub);font-size:11px;cursor:pointer">📋 Copy</button>
+  <div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Đã copy xong!</div></div>
+  <div style="padding:16px 0 4px">
+   <div style="font-size:14px;color:var(--text);margin-bottom:12px">Toàn bộ dữ liệu + câu hỏi đã được copy vào clipboard và tab <strong>claude.ai</strong> vừa mở ra.<br>Chỉ cần <kbd style="background:var(--bg-main);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:12px">Ctrl+V</kbd> rồi nhấn <kbd style="background:var(--bg-main);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:12px">Enter</kbd> là Claude phân tích ngay!</div>
+   <details style="cursor:pointer">
+    <summary style="font-size:12px;color:var(--text-sub);user-select:none">👁 Xem trước nội dung đã copy</summary>
+    <pre id="aiPreviewArea" style="margin-top:10px;padding:12px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-sub);white-space:pre-wrap;max-height:300px;overflow-y:auto"></pre>
+   </details>
   </div>
-  <div class="ai-result" id="aiResultArea"></div>
  </div>`;
-}
-
-function saveAIKey(){
- const k=document.getElementById('aiKeyInput').value.trim();
- localStorage.setItem('aiApiKey',k);
- document.getElementById('aiKeySaved').textContent=k?'✅ Đã lưu':'';
 }
 
 const AI_PRESETS={
@@ -721,38 +722,30 @@ function md2html(text){
 }
 
 async function runAIAnalysis(){
- const key=localStorage.getItem('aiApiKey');
- if(!key){document.getElementById('aiStatus').textContent='⚠️ Chưa có API key';return;}
- const prompt=(document.getElementById('aiPromptArea').value||'').trim();
- if(!prompt){document.getElementById('aiStatus').textContent='⚠️ Vui lòng nhập nội dung';return;}
+ const userQ=(document.getElementById('aiPromptArea').value||'').trim();
+ if(!userQ){document.getElementById('aiStatus').textContent='⚠️ Vui lòng nhập nội dung cần phân tích';return;}
  const btn=document.getElementById('aiRunBtn');
- btn.disabled=true;btn.innerHTML='<span>⏳</span><span>Đang phân tích...</span>';
+ btn.disabled=true;btn.innerHTML='<span>⏳</span><span>Đang chuẩn bị...</span>';
  document.getElementById('aiStatus').textContent='';
- const card=document.getElementById('aiResultCard');
- card.style.display='block';
- document.getElementById('aiResultArea').innerHTML='<div class="ai-thinking"><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><span style="margin-left:4px">AI đang phân tích dữ liệu...</span></div>';
  const dataCtx=gatherDashboardData();
- const systemPrompt='Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.';
- try{
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
-   method:'POST',
-   headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json'},
-   body:JSON.stringify({model:'claude-opus-4-8',max_tokens:3000,system:systemPrompt,messages:[{role:'user',content:`DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:\n${dataCtx}\n\nYÊU CẦU:\n${prompt}`}]})
-  });
-  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||`Lỗi HTTP ${res.status}`);}
-  const data=await res.json();
-  const text=data.content?.[0]?.text||'(Không có phản hồi)';
-  document.getElementById('aiResultArea').innerHTML=md2html(text);
-  window._lastAIResult=text;
- }catch(e){
-  const isCORS=e.message.includes('Failed to fetch')||e.name==='TypeError';
-  document.getElementById('aiResultArea').innerHTML=`<div class="ai-error">❌ ${isCORS?'Trình duyệt chặn request (CORS). Thử dùng Chrome và tắt extension chặn request.':e.message}</div>`;
- }
- btn.disabled=false;btn.innerHTML='<span>✨</span><span>Phân tích ngay</span>';
-}
+ const fullPrompt=`Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.
 
-function copyAIResult(){
- if(window._lastAIResult)navigator.clipboard.writeText(window._lastAIResult).then(()=>alert('Đã copy!'));
+DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:
+${dataCtx}
+
+YÊU CẦU:
+${userQ}`;
+ try{
+  await navigator.clipboard.writeText(fullPrompt);
+  window.open('https://claude.ai/new','_blank');
+  const card=document.getElementById('aiResultCard');
+  card.style.display='block';
+  document.getElementById('aiPreviewArea').textContent=fullPrompt;
+  document.getElementById('aiStatus').textContent='✅ Đã copy! Dán vào Claude.ai (Ctrl+V) rồi Enter';
+ }catch(e){
+  document.getElementById('aiStatus').textContent='⚠️ Không copy được: '+e.message;
+ }
+ btn.disabled=false;btn.innerHTML='<span>🚀</span><span>Gửi sang Claude</span>';
 }
 
 async function init(){
