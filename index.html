@@ -740,7 +740,7 @@ async function runAIAnalysis(){
    method:'POST',
    headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
    body:JSON.stringify({
-    model:'llama-3.1-8b-instant',
+    model:'gemma2-9b-it',
     messages:[{role:'system',content:systemPrompt},{role:'user',content:userMsg}],
     temperature:0.7,max_tokens:4096
    })
