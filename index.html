@@ -237,7 +237,7 @@ async function fetchExtSheet(id,retry=2){
 }
 function buildXuLy(rowsA,rowsB){
  function parseAMName(s){if(!s)return'';const i=s.lastIndexOf(',');return i>0?s.substring(0,i).trim():s.trim();}
- function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildSection(rows,mCol,mLabel,tcLabel,hiThr,midThr){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
@@ -299,7 +299,7 @@ function buildXuLy(rowsA,rowsB){
 
 // === TỔNG QUAN 7 NGÀY THEO BƯU CỤC (p9) ===
 function buildXuLyBC(rowsC,rowsD){
- function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildSection(rows,mCol,mLabel,tcLabel,hiThr,midThr){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
@@ -362,7 +362,7 @@ function buildXuLyBC(rowsC,rowsD){
 
 // === BÁO CÁO GIAO TTS (p10) ===
 function buildTTSGiao(rowsAM,rowsBC){
- function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildAMTable(rows){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
@@ -466,7 +466,7 @@ function buildTTSGiao(rowsAM,rowsBC){
 function buildTiLeTraKTG(rowsAM,rowsBC){
  // Tổng cộng % Trả đọc từ GHN live dashboard (cập nhật thủ công)
  const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6};
- function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildAMSection(rows){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
