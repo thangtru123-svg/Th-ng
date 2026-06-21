@@ -632,6 +632,16 @@ function buildAIPage(){
     <pre id="aiPreviewArea" style="margin-top:10px;padding:12px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-sub);white-space:pre-wrap;max-height:300px;overflow-y:auto"></pre>
    </details>
   </div>
+ </div>
+ <div class="card" style="margin-top:14px">
+  <div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Kết quả từ Claude</div></div>
+  <div style="margin-bottom:10px;font-size:12px;color:var(--text-sub)">Sau khi Claude trả lời, copy toàn bộ kết quả và dán vào đây để hiển thị đẹp:</div>
+  <textarea id="aiPasteArea" style="width:100%;min-height:120px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-main);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box" placeholder="Dán kết quả từ Claude vào đây (Ctrl+V)..."></textarea>
+  <div style="display:flex;gap:10px;margin-top:10px">
+   <button onclick="renderAIPaste()" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">✨ Hiển thị kết quả</button>
+   <button onclick="document.getElementById('aiPasteArea').value='';document.getElementById('aiPasteResult').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--text-sub);padding:9px 16px;border-radius:8px;cursor:pointer;font-size:13px">🗑 Xoá</button>
+  </div>
+  <div id="aiPasteResult" style="display:none;margin-top:16px;padding:16px;background:var(--bg-main);border-radius:10px;border:1px solid var(--border);line-height:1.7;font-size:13.5px"></div>
  </div>`;
 }
 
@@ -746,6 +756,15 @@ ${userQ}`;
   document.getElementById('aiStatus').textContent='⚠️ Không copy được: '+e.message;
  }
  btn.disabled=false;btn.innerHTML='<span>🚀</span><span>Gửi sang Claude</span>';
+}
+
+function renderAIPaste(){
+ const txt=(document.getElementById('aiPasteArea').value||'').trim();
+ if(!txt){return;}
+ const out=document.getElementById('aiPasteResult');
+ out.innerHTML=md2html(txt);
+ out.style.display='block';
+ out.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 async function init(){
