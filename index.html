@@ -464,6 +464,8 @@ function buildTTSGiao(rowsAM,rowsBC){
 
 // === TỈ LỆ TRẢ (KẾT THÚC GIAO) (p11) ===
 function buildTiLeTraKTG(rowsAM,rowsBC){
+ // Tổng cộng % Trả đọc từ GHN live dashboard (cập nhật thủ công)
+ const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6};
  function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildAMSection(rows){
@@ -488,7 +490,7 @@ function buildTiLeTraKTG(rowsAM,rowsBC){
    dates7.forEach(d=>{const cell=pivot[name][d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6">${cell.volPct.toFixed(1)}%</td><td style="text-align:center"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    html+='</tr>';
   });
-  html+=`<tr class="tot"><td colspan="2" style="font-style:italic;color:var(--text-sub)">⚠️ "Tổng cộng" chỉ hiển thị trên dashboard GHN live — không có trong file xuất</td>${dates7.map(()=>'<td colspan="2" style="text-align:center;color:var(--text-sub)">—</td>').join('')}</tr>`;
+  html+=`<tr class="tot"><td colspan="2"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td style="text-align:center"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return'<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>';}).join('')}</tr>`;
   html+='</tbody></table></div>';return html;
  }
  function buildBCSection(rows){
@@ -515,11 +517,11 @@ function buildTiLeTraKTG(rowsAM,rowsBC){
    dates7.forEach(d=>{const cell=row[d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}">${cell.volPct.toFixed(1)}%</td><td style="text-align:center;${cs}"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}});
    html+='</tr>';
   });
-  html+=`<tr class="tot"><td colspan="3" style="font-style:italic;color:var(--text-sub);${cs}">⚠️ "Tổng cộng" chỉ hiển thị trên dashboard GHN live — không có trong file xuất</td>${dates7.map(()=>`<td colspan="2" style="text-align:center;color:var(--text-sub);${cs}">—</td>`).join('')}</tr>`;
+  html+=`<tr class="tot"><td colspan="3" style="${cs}"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}color:var(--text-sub)">—</td><td style="text-align:center;${cs}"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}).join('')}</tr>`;
   html+='</tbody></table></div>';return html;
  }
  return`<div class="page-header"><div class="page-title">Tỉ Lệ Trả (Kết Thúc Giao)</div>
-  <div class="page-meta"><span class="tag tag-orange">🔄 7 ngày gần nhất · Nguồn: GHN Looker</span><span style="color:var(--yellow);font-weight:500">⚠️ "Tổng cộng" chỉ hiển thị trên dashboard GHN live, không xuất được</span></div></div>
+  <div class="page-meta"><span class="tag tag-orange">🔄 7 ngày gần nhất · Nguồn: GHN Looker</span><span style="color:var(--text-sub);font-size:12px">Hàng "Tổng cộng" được đọc thủ công từ GHN live dashboard</span></div></div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Tỉ Lệ Trả Theo AM</div><div class="card-info">% Trả: Xanh ≤10% · Vàng ≤15% · Đỏ &gt;15% · Sắp xếp: cao → thấp</div></div>${buildAMSection(rowsAM)}</div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Tỉ Lệ Trả Theo Bưu Cục</div><div class="card-info">% Trả: Xanh ≤10% · Vàng ≤15% · Đỏ &gt;15% · Sắp xếp: cao → thấp</div></div>${buildBCSection(rowsBC)}</div>`;
 }
