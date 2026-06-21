@@ -490,7 +490,7 @@ function buildTiLeTraKTG(rowsAM,rowsBC){
    dates7.forEach(d=>{const cell=pivot[name][d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6">${cell.volPct.toFixed(1)}%</td><td style="text-align:center"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    html+='</tr>';
   });
-  html+=`<tr class="tot"><td colspan="2"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td style="text-align:center"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return'<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>';}).join('')}</tr>`;
+  html+=`<tr class="tot"><td colspan="2"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[isoDate(d)||d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td style="text-align:center"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return'<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>';}).join('')}</tr>`;
   html+='</tbody></table></div>';return html;
  }
  function buildBCSection(rows){
@@ -517,7 +517,7 @@ function buildTiLeTraKTG(rowsAM,rowsBC){
    dates7.forEach(d=>{const cell=row[d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}">${cell.volPct.toFixed(1)}%</td><td style="text-align:center;${cs}"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}});
    html+='</tr>';
   });
-  html+=`<tr class="tot"><td colspan="3" style="${cs}"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}color:var(--text-sub)">—</td><td style="text-align:center;${cs}"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}).join('')}</tr>`;
+  html+=`<tr class="tot"><td colspan="3" style="${cs}"><strong>Tổng cộng</strong></td>${dates7.map(d=>{const v=TONG_CONG[isoDate(d)||d];if(v!=null){const c=v<=10?'g':v<=15?'m':'b';return`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}color:var(--text-sub)">—</td><td style="text-align:center;${cs}"><span class="pct ${c}">${v.toFixed(1)}%</span></td>`;}return`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}).join('')}</tr>`;
   html+='</tbody></table></div>';return html;
  }
  return`<div class="page-header"><div class="page-title">Tỉ Lệ Trả (Kết Thúc Giao)</div>
