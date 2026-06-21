@@ -189,6 +189,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <button class="nav-item active" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày theo AM</button>
  <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
  <button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
+ <button class="nav-item" onclick="show('p11',this)"><span class="icon">🔄</span>Tỉ lệ trả (Kết thúc giao)</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -199,6 +200,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="page active" id="p8"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p9"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p10"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p11"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -219,6 +221,8 @@ const SHEET_XL_D='1ZQRuQLs-gw5XXg1dXCt29RhSSScy6Es6e6RGoWiNmf4'; // Giao - BC
 // Sheet TTS (Section B - Giao, chỉ lọc Loại khách hàng = TTS)
 const SHEET_TTS_AM='1HI7uK9YlhfZg9JoDxqbVffEUD0fMBIaVwSm2Hb8FMHI'; // TTS Giao - AM
 const SHEET_TTS_BC='1GKVbncNYdQ9S6w5zR9rhAxmLTfhYP7bknYNjlQ9MAT0'; // TTS Giao - BC
+const SHEET_TLT_AM='1BUyLdJB7CjqbbLOt31w2vtfZL55aR8VqzJ1l3fndoWY'; // Tỉ lệ trả - AM
+const SHEET_TLT_BC='1yOJnix4LFjQPZIVfhQrLLxXW6gmYpk8UarXJcj9b8Zw'; // Tỉ lệ trả - BC
 async function fetchExtSheet(id,retry=2){
  for(let i=0;i<=retry;i++){
   try{
@@ -458,6 +462,68 @@ function buildTTSGiao(rowsAM,rowsBC){
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Báo Cáo Giao TTS Theo Bưu Cục</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${buildBCTable(rowsBC)}</div>`;
 }
 
+// === TỈ LỆ TRẢ (KẾT THÚC GIAO) (p11) ===
+function buildTiLeTraKTG(rowsAM,rowsBC){
+ function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
+ function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
+ function buildAMSection(rows){
+  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const data=rows.slice(1).filter(r=>r[1]&&r[1].trim());
+  const amRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b&&!b.includes('grand total')&&!b.includes('tổng số');});
+  const allDates=[...new Set(amRows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a)));
+  const dates7=allDates.slice(0,7).reverse();
+  if(!dates7.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ngày</p>';
+  const pivot={};
+  amRows.forEach(r=>{
+   const name=(r[1]||'').trim();const date=(r[2]||'').trim();
+   if(!name||!dates7.includes(date))return;
+   if(!pivot[name])pivot[name]={};
+   pivot[name][date]={volPct:pnG(r[3])*100,retPct:pnG(r[4])*100};
+  });
+  const latest=dates7[dates7.length-1];
+  const names=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][latest]?pivot[a][latest].retPct:-1;const pB=pivot[b][latest]?pivot[b][latest].retPct:-1;return pB-pA;});
+  let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="text-align:center;width:36px">STT</th><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="2" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:center;border-left:1px solid var(--border)">%vol</th><th style="text-align:center">% Trả</th>`).join('')}</tr></thead><tbody>`;
+  names.forEach((name,i)=>{
+   html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="white-space:nowrap"><strong>${name}</strong></td>`;
+   dates7.forEach(d=>{const cell=pivot[name][d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6">${cell.volPct.toFixed(1)}%</td><td style="text-align:center"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
+   html+='</tr>';
+  });
+  html+=`<tr class="tot"><td colspan="2">⚠️ Grand Total không có trong file xuất</td>${dates7.map(()=>'<td colspan="2" style="text-align:center;color:var(--text-sub);font-style:italic">—</td>').join('')}</tr>`;
+  html+='</tbody></table></div>';return html;
+ }
+ function buildBCSection(rows){
+  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const data=rows.slice(1).filter(r=>r[1]&&r[1].trim());
+  const bcRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b&&!b.includes('grand total')&&!b.includes('tổng số');});
+  const allDates=[...new Set(bcRows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a)));
+  const dates7=allDates.slice(0,7).reverse();
+  if(!dates7.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ngày</p>';
+  const pivot={};
+  bcRows.forEach(r=>{
+   const amName=(r[0]||'').trim();const bcName=(r[1]||'').trim();const date=(r[2]||'').trim();
+   if(!bcName||!dates7.includes(date))return;
+   if(!pivot[bcName])pivot[bcName]={amName};
+   pivot[bcName][date]={volPct:pnG(r[3])*100,retPct:pnG(r[4])*100};
+  });
+  const latest=dates7[dates7.length-1];
+  const cs='padding:4px 8px;';
+  const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][latest]?pivot[a][latest].retPct:-1;const pB=pivot[b][latest]?pivot[b][latest].retPct:-1;return pB-pA;});
+  let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="2" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:center;border-left:1px solid var(--border);${cs}">%vol</th><th style="text-align:center;${cs}">% Trả</th>`).join('')}</tr></thead><tbody>`;
+  bcNames.forEach((name,i)=>{
+   const row=pivot[name];
+   html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px;${cs}">${i+1}</td><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:11px;${cs}">${row.amName||''}</td>`;
+   dates7.forEach(d=>{const cell=row[d];if(cell){const c=cell.retPct<=10?'g':cell.retPct<=15?'m':'b';html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;${cs}">${cell.volPct.toFixed(1)}%</td><td style="text-align:center;${cs}"><span class="pct ${c}">${cell.retPct.toFixed(1)}%</span></td>`;}else{html+=`<td style="text-align:center;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}});
+   html+='</tr>';
+  });
+  html+=`<tr class="tot"><td colspan="3" style="${cs}">⚠️ Grand Total không có trong file xuất</td>${dates7.map(()=>`<td colspan="2" style="text-align:center;color:var(--text-sub);font-style:italic;${cs}">—</td>`).join('')}</tr>`;
+  html+='</tbody></table></div>';return html;
+ }
+ return`<div class="page-header"><div class="page-title">Tỉ Lệ Trả (Kết Thúc Giao)</div>
+  <div class="page-meta"><span class="tag tag-orange">🔄 7 ngày gần nhất · Nguồn: GHN Looker</span><span style="color:var(--yellow);font-weight:500">⚠️ Grand Total chỉ hiển thị trên báo cáo live, không có trong file xuất</span></div></div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Tỉ Lệ Trả Theo AM</div><div class="card-info">% Trả: Xanh ≤10% · Vàng ≤15% · Đỏ &gt;15% · Sắp xếp: cao → thấp</div></div>${buildAMSection(rowsAM)}</div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Tỉ Lệ Trả Theo Bưu Cục</div><div class="card-info">% Trả: Xanh ≤10% · Vàng ≤15% · Đỏ &gt;15% · Sắp xếp: cao → thấp</div></div>${buildBCSection(rowsBC)}</div>`;
+}
+
 // splash
 function initSplash(){
  const container=document.getElementById('splashParticles');
@@ -485,6 +551,7 @@ async function init(){
  let xlA=null,xlB=null,xlErrA=null,xlErrB=null;
  let xlC=null,xlD=null,xlErrC=null,xlErrD=null;
  let ttsAM=null,ttsBC=null,ttsErrAM=null,ttsErrBC=null;
+ let tltAM=null,tltBC=null,tltErrAM=null,tltErrBC=null;
  const xlFetches=[
   fetchExtSheet(SHEET_XL_A).then(d=>xlA=d).catch(e=>xlErrA=e.message),
   fetchExtSheet(SHEET_XL_B).then(d=>xlB=d).catch(e=>xlErrB=e.message),
@@ -493,6 +560,8 @@ async function init(){
  if(SHEET_XL_D)xlFetches.push(fetchExtSheet(SHEET_XL_D).then(d=>xlD=d).catch(e=>xlErrD=e.message));
  if(SHEET_TTS_AM)xlFetches.push(fetchExtSheet(SHEET_TTS_AM).then(d=>ttsAM=d).catch(e=>ttsErrAM=e.message));
  if(SHEET_TTS_BC)xlFetches.push(fetchExtSheet(SHEET_TTS_BC).then(d=>ttsBC=d).catch(e=>ttsErrBC=e.message));
+ if(SHEET_TLT_AM)xlFetches.push(fetchExtSheet(SHEET_TLT_AM).then(d=>tltAM=d).catch(e=>tltErrAM=e.message));
+ if(SHEET_TLT_BC)xlFetches.push(fetchExtSheet(SHEET_TLT_BC).then(d=>tltBC=d).catch(e=>tltErrBC=e.message));
  await Promise.all(xlFetches);
  // Build p8 — Tổng quan 7 ngày theo AM
  const p8el=document.getElementById('p8');
@@ -525,6 +594,15 @@ async function init(){
  } else {
   p10el.innerHTML=errPage('Chưa có dữ liệu TTS — Sheet chưa được public hoặc chưa xuất.');
  }
+ // Build p11 — Tỉ lệ trả kết thúc giao
+ const p11el=document.getElementById('p11');
+ if(tltErrAM||tltErrBC){
+  p11el.innerHTML=errPage(`Dữ liệu Tỉ Lệ Trả: ${tltErrAM||''} ${tltErrBC||''}`.trim());
+ } else if(tltAM&&tltBC){
+  p11el.innerHTML=buildTiLeTraKTG(tltAM,tltBC);
+ } else {
+  p11el.innerHTML=errPage('Chưa có dữ liệu Tỉ Lệ Trả — Sheet chưa được public hoặc chưa xuất.');
+ }
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
  document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
@@ -533,7 +611,7 @@ async function init(){
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- ['p8','p9','p10'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p8','p9','p10','p11'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  await init();
 };
 
