@@ -297,10 +297,10 @@ function buildXuLy(rowsA,rowsB){
    grandPivot[date]={vol,pct,volTC:Math.round(vol*pct/100)};
   });
   const _latestAM=dates7[dates7.length-1];const amNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][_latestAM]?pivot[a][_latestAM].pct:999;const pB=pivot[b][_latestAM]?pivot[b][_latestAM].pct:999;return pA-pB;});
-  let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:right">${tcLabel}</th><th style="text-align:center">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
-  amNames.forEach(name=>{
+  let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="text-align:center;width:36px">STT</th><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:right">${tcLabel}</th><th style="text-align:center">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
+  amNames.forEach((name,i)=>{
    const row=pivot[name];
-   html+=`<tr><td style="white-space:nowrap"><strong>${name}</strong></td>`;
+   html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="white-space:nowrap"><strong>${name}</strong></td>`;
    dates7.forEach(d=>{
     const cell=row[d];
     if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary)">${fmt(cell.volTC)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
@@ -309,7 +309,7 @@ function buildXuLy(rowsA,rowsB){
    html+='</tr>';
   });
   if(Object.keys(grandPivot).length){
-   html+=`<tr class="tot"><td>Grand Total</td>`;
+   html+=`<tr class="tot"><td colspan="2">Grand Total</td>`;
    dates7.forEach(d=>{
     const cell=grandPivot[d];
     if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary)">${fmt(cell.volTC)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
@@ -359,10 +359,10 @@ function buildXuLyBC(rowsC,rowsD){
   });
   const _latestBC=dates7[dates7.length-1];const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][_latestBC]?pivot[a][_latestBC].pct:999;const pB=pivot[b][_latestBC]?pivot[b][_latestBC].pct:999;return pA-pB;});
   const cs='padding:4px 8px;font-size:12px;';
-  let html=`<div class="table-wrap" style="max-height:420px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">${tcLabel}</th><th style="text-align:center;${cs}">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
-  bcNames.forEach(name=>{
+  let html=`<div class="table-wrap" style="max-height:420px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">${tcLabel}</th><th style="text-align:center;${cs}">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
+  bcNames.forEach((name,i)=>{
    const row=pivot[name];
-   html+=`<tr><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:11px;${cs}">${row.amName||''}</td>`;
+   html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px;${cs}">${i+1}</td><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:11px;${cs}">${row.amName||''}</td>`;
    dates7.forEach(d=>{
     const cell=row[d];
     if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;${cs}">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary);${cs}">${fmt(cell.volTC)}</td><td style="text-align:center;${cs}"><span class="pct ${c}">${p}%</span></td>`;}
@@ -371,7 +371,7 @@ function buildXuLyBC(rowsC,rowsD){
    html+='</tr>';
   });
   if(Object.keys(grandPivot).length){
-   html+=`<tr class="tot"><td colspan="2" style="${cs}">Grand Total</td>`;
+   html+=`<tr class="tot"><td colspan="3" style="${cs}">Grand Total</td>`;
    dates7.forEach(d=>{
     const cell=grandPivot[d];
     if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=hiThr?'g':cell.pct>=midThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;${cs}">${fmt(cell.vol)}</td><td style="text-align:right;color:var(--primary);${cs}">${fmt(cell.volTC)}</td><td style="text-align:center;${cs}"><span class="pct ${c}">${p}%</span></td>`;}
