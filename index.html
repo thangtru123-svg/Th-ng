@@ -95,7 +95,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 .card-info{font-size:11px;color:var(--text-sub)}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:600px}
-th{background:#FEEDE4;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#9A3412;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--orange-mid);white-space:nowrap}
+th{background:#FEEDE4;padding:9px 12px;text-align:left;font-size:13px;font-weight:700;color:#9A3412;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--orange-mid);white-space:nowrap}
 td{padding:8px 12px;border-bottom:1px solid #F3F4F6;font-size:12px;color:var(--text-main);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAFA}
@@ -324,7 +324,7 @@ function buildXuLyBC(rowsC,rowsD){
   });
   if(!Object.keys(grandPivot).length){dates7.forEach(d=>{let tv=0,tc=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tc+=row[d].volTC;}});if(tv>0)grandPivot[d]={vol:tv,pct:tc/tv*100,volTC:tc};});}
   const _latestBC=dates7[dates7.length-1];const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][_latestBC]?pivot[a][_latestBC].pct:999;const pB=pivot[b][_latestBC]?pivot[b][_latestBC].pct:999;return pA-pB;});
-  const cs='padding:4px 8px;font-size:12px;';
+  const cs='padding:4px 8px;';
   let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">${tcLabel}</th><th style="text-align:center;${cs}">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
   bcNames.forEach((name,i)=>{
    const row=pivot[name];
@@ -428,7 +428,7 @@ function buildTTSGiao(rowsAM,rowsBC){
    grandPivot[date]={vol,pct,volGTC:Math.round(vol*pct/100)};
   });
   const latest=dates7[dates7.length-1];
-  const cs='padding:4px 8px;font-size:12px;';
+  const cs='padding:4px 8px;';
   const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][latest]?pivot[a][latest].pct:999;const pB=pivot[b][latest]?pivot[b][latest].pct:999;return pA-pB;});
   let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">GTC</th><th style="text-align:center;${cs}">%GTC</th>`).join('')}</tr></thead><tbody>`;
   bcNames.forEach((name,i)=>{
