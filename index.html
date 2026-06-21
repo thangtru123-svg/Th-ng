@@ -99,19 +99,11 @@ th{background:#F8F9FA;padding:9px 12px;text-align:left;font-size:10px;font-weigh
 td{padding:8px 12px;border-bottom:1px solid #F3F4F6;font-size:12px;color:var(--text-main);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAFA}
-tr.hl td{background:linear-gradient(90deg,#FFF5F0,transparent)}
-tr.hl:hover td{background:linear-gradient(90deg,#FFE9E0,transparent)}
 tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-mid)}
 .rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
 .r1{background:#FEF9C3;color:#854D0E}.r2{background:#F1F5F9;color:#475569}.r3{background:#FEF3C7;color:#92400E}.rn{background:#F3F4F6;color:var(--text-sub)}
 .pct{display:inline-block;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
-.bw{display:flex;align-items:center;gap:6px}
-.bgr{flex:1;height:5px;background:#E5E7EB;border-radius:3px;overflow:hidden;min-width:36px}
-.bf{height:100%;border-radius:3px}
-.bo{background:var(--orange)}.bgg{background:var(--green)}.brd{background:var(--red)}
-.bv{font-size:11px;font-weight:600;color:var(--text-main);white-space:nowrap;min-width:42px;text-align:right}
-.am-self{font-weight:700;color:var(--orange-dark)}
 .vol-gtc{color:var(--green);font-weight:700}
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
@@ -128,7 +120,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
   <div class="splash-logo-wrap">
    <div class="splash-logo-txt">GHN</div>
    <div class="splash-divider"></div>
-   <div class="splash-vung">Vùng XBG · Bắc Giang</div>
+   <div class="splash-vung">Vùng XBG</div>
   </div>
   <div class="splash-title">GHN – Vùng XBG<br><span>XIN CHÀO BẠN! 👋</span></div>
   <div class="map-row">
@@ -214,7 +206,7 @@ const SELF='Phạm Đức Thắng';
 const SID='1zNYw6PMBa_hNxnfyREstfg-L78djDNym0rMU-LXzicg';
 const SHEETS={
  vanHanh:{name:'VẬN HÀNH AM',range:'A1:F33'},
- bcGiao:{name:'BƯU CỤC-GIAO',range:'A1:F33'},
+ bcGiao:{name:'BƯU CỤC-GIAO',range:'A1:F100'},
  gtcTTS:{name:'GTC TTS',range:'A1:F33'},
  ontime:{name:'AM-ONTIME TTS',range:'A1:F33'},
  fdAM:{name:'FD( tỉ lệ trả) - AM',range:'A1:E24'},
@@ -230,8 +222,8 @@ function pn(v){return parseFloat((v||'').replace(/,/g,'').replace('%',''))||0;}
 function pi(v){return parseInt((v||'').replace(/,/g,''))||0;}
 function gc(v,g,m){const n=pn(v);return n>=g?'g':n>=m?'m':'b';}
 function fd(v){const n=pn(v);return n<=8?'g':n<=12?'m':'b';}
-function bar(pct,cls){const w=Math.min(100,pn(pct)||0);return`<div class="bw"><div class="bgr"><div class="bf ${cls}" style="width:${w}%"></div></div><span class="bv">${pct}</span></div>`;}
-function am(n){return n.includes(SELF)?`<span class="am-self">${n}</span>`:n;}
+function bar(pct,cls){const bc=cls==='bgg'?'g':cls==='brd'?'b':'m';return`<span class="pct ${bc}">${pct}</span>`;}
+function am(n){return n;}
 function rk(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return`<div class="rank ${c}">${i+1}</div>`;}
 function bg(v,g,m){return`<span class="pct ${gc(v,g,m)}">${v}</span>`;}
 function fb(v){return`<span class="pct ${fd(v)}">${v}</span>`;}
@@ -241,7 +233,6 @@ function errPage(msg){return`<div class="error-box">⚠️ Không thể tải d�
 
 // splash
 function initSplash(){
- // Generate floating particles
  const container=document.getElementById('splashParticles');
  if(container){
   const colors=['#F15D29','#FF9A6C','#FBBF24','#38BDF8','#A78BFA','#34D399','#60A5FA','#ffffff'];
@@ -366,7 +357,7 @@ function buildFDAM(rows){
    <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[1]:'—'}</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
    <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">${mx[1]||'—'}</div><div class="kpi-sub">${mx[0]||'—'}</div></div>
    <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">${mn[1]||'—'}</div><div class="kpi-sub">${mn[0]||'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">⭐ Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${self?self[1]:'—'}</div><div class="kpi-sub">SME ${self?self[2]:'—'} · TTS ${self?self[3]:'—'} · Shopee ${self?self[4]:'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${self?self[1]:'—'}</div><div class="kpi-sub">SME ${self?self[2]:'—'} · TTS ${self?self[3]:'—'} · Shopee ${self?self[4]:'—'}</div></div>
   </div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
 }
@@ -393,17 +384,17 @@ function buildTableForPage(id,rows,gtcMap={}){
    const pctGTCStr=gtc.pctGTC>0?gtc.pctGTC.toFixed(1)+'%':'—';
    const volGTCStr=gtc.volGTC>0?fmt(gtc.volGTC):'—';
    const tr=document.createElement('tr');
-   if(amName.includes(SELF))tr.className='hl';
    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td><td>${bar(pctGTCStr,gtcCls)}</td><td class="vol-gtc">${volGTCStr}</td>`;
    return tr;
   });
   if(totRow){
    const e=enrichVH(totRow);
-   const sumGTCVol=dr.reduce((s,r)=>{const g=gtcMap[(r[1]||'').trim()];return s+(g?g.volGTC:0);},0);
-   const sumTotVol=dr.reduce((s,r)=>{const e2=enrichVH(r);return s+e2.tot;},0);
-   const avgGTCPct=sumTotVol>0?((sumGTCVol/sumTotVol)*100).toFixed(1)+'%':'—';
+   const totGTC=gtcMap._totalGTC||{pctGTC:0,volGTC:0};
+   const totGTCPct=totGTC.pctGTC>0?totGTC.pctGTC.toFixed(1)+'%':'—';
+   const totGTCVol=totGTC.volGTC>0?fmt(totGTC.volGTC):'—';
+   const totGTCCls=totGTC.pctGTC>=80?'bgg':totGTC.pctGTC>=70?'bo':'brd';
    const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td><td>${bar(avgGTCPct,'bgg')}</td><td class="vol-gtc"><strong>${fmt(sumGTCVol)}</strong></td>`;
+   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td><td>${bar(totGTCPct,totGTCCls)}</td><td class="vol-gtc"><strong>${totGTCVol}</strong></td>`;
    trs.push(tr);
   }
   return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Tổng Vol','Số Gán','%Gán Tổng','%GTC','Vol GTC'],trs);
@@ -413,7 +404,6 @@ function buildTableForPage(id,rows,gtcMap={}){
    const v1=pi(r[3]),pGTC=pn(r[5]),volGTC=Math.round(v1*pGTC/100);
    const gcls=gc(r[5],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
    const tr=document.createElement('tr');
-   if((r[1]||'').includes(SELF))tr.className='hl';
    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'','bo')}</td><td>${bar(r[5]||'',bc)}</td><td class="vol-gtc">${fmt(volGTC)}</td>`;
    return tr;
   });
@@ -422,26 +412,26 @@ function buildTableForPage(id,rows,gtcMap={}){
  if(id==='p3'){
   const dr=data.filter(r=>r[0].match(/^\d+$/));
   const totRow=data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
-  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;return tr;});
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;return tr;});
   if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;trs.push(tr);}
   return mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],trs);
  }
  if(id==='p4'){
   const dr=data.filter(r=>r[0].match(/^\d+$/));
   const totRow=data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
-  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'',90,80)}</td><td>${r[5]||''}</td>`;return tr;});
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'',90,80)}</td><td>${r[5]||''}</td>`;return tr;});
   if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;trs.push(tr);}
   return mkTable(['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],trs);
  }
  if(id==='p5'){
   const dr=data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL')&&r[0].trim());
   const totRow=data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
-  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[0]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;return tr;});
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;return tr;});
   if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;trs.push(tr);}
   return mkTable(['#','AM','FD Total','SME (COD)','TTS','Shopee'],trs);
  }
  if(id==='p6'){
-  const trs=data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;return tr;});
+  const trs=data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;return tr;});
   return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs);
  }
 }
@@ -468,10 +458,15 @@ async function init(){
  // Build GTC lookup map: amName → {pctGTC, volGTC}
  const gtcMap={};
  if(rawData.gtcTTS){
-  rawData.gtcTTS.slice(1).filter(r=>r[0]&&r[0].match(/^\d+$/)).forEach(r=>{
+  const gtcData=rawData.gtcTTS.slice(1).filter(r=>r[0]&&r[0].trim());
+  const gtcTotRow=gtcData.find(r=>!r[0].match(/^\d+$/)&&r[1]);
+  gtcData.filter(r=>r[0].match(/^\d+$/)).forEach(r=>{
    const amName=(r[1]||'').trim();
    if(amName){const v1=pi(r[2]),pg=pn(r[4]);gtcMap[amName]={pctGTC:pg,volGTC:Math.round(v1*pg/100)};}
   });
+  if(gtcTotRow){
+   gtcMap._totalGTC={pctGTC:pn(gtcTotRow[4]),volGTC:Math.round(pi(gtcTotRow[2])*pn(gtcTotRow[4])/100)};
+  }
  }
  // Build each page
  configs.forEach(({id,key,build})=>{
