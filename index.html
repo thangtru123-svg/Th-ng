@@ -221,6 +221,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
  <button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
  <button class="nav-item" onclick="show('p11',this)"><span class="icon">🔄</span>Tỉ lệ trả (Kết thúc giao)</button>
+ <button class="nav-item" onclick="show('p13',this)"><span class="icon">⏳</span>Aging &gt; 5 ngày</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -235,6 +236,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 <div class="page" id="p10"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p11"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p12"></div>
+<div class="page" id="p13"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -823,15 +825,144 @@ async function init(){
  }
  // Build p12 — AI Analysis
  buildAIPage();
+ // Build p13 — Aging > 5 ngày
+ buildAgingPage();
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
  document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
+// === AGING > 5 NGÀY (p13) ===
+const AGING_SHEET_ID='1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew';
+const AGING_GID='1424919323';
+
+function parseCsvRaw(text){
+ return text.trim().split('\n').slice(1).map(l=>{
+  const cols=[];let cur='',inQ=false;
+  for(const c of l){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}
+  cols.push(cur.trim());return cols;
+ });
+}
+
+function agingFmtDate(d){if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}`:d;}
+
+function buildAgingHTML(rows){
+ const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
+ const last7=allDates.slice(-7);
+ const latest=last7[last7.length-1];
+ const prev=last7[last7.length-2];
+ const recent=rows.filter(r=>last7.includes(r[11]));
+ const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
+ const unstableBCSet=new Set(unstableRows.map(r=>r[2]));
+ const byDate={};recent.forEach(r=>{byDate[r[11]]=(byDate[r[11]]||0)+1;});
+ const latestTotal=byDate[latest]||0;
+ const prevTotal=byDate[prev]||0;
+ const delta=latestTotal-prevTotal;
+ const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
+
+ // KPI row
+ const deltaSign=delta>0?'+':'';
+ const deltaIcon=delta<0?'▼':delta>0?'▲':'—';
+ const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
+ let h=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">`;
+ const kpis=[
+  {icon:'📦',label:'Tổng Aging hôm nay',val:latestTotal.toLocaleString(),sub:agingFmtDate(latest)+'/2026',color:'var(--orange)'},
+  {icon:'📅',label:'Tổng Aging N-1',val:prevTotal.toLocaleString(),sub:agingFmtDate(prev)+'/2026',color:'var(--blue,#3182CE)'},
+  {icon:delta<0?'📉':'📈',label:'Tăng / Giảm so N-1',val:`${deltaIcon} ${Math.abs(delta).toLocaleString()}`,sub:`${deltaSign}${delta} đơn so hôm qua`,color:deltaColor},
+  {icon:'⚠️',label:'Aging BC bất ổn (hôm nay)',val:unstableLatest.toLocaleString(),sub:`${unstableBCSet.size} bưu cục bất ổn`,color:'var(--red)'},
+ ];
+ kpis.forEach(k=>{
+  h+=`<div style="background:var(--card);border-radius:12px;padding:18px 16px;text-align:center;box-shadow:var(--shadow-sm);border-top:3px solid ${k.color}">
+   <div style="font-size:24px;margin-bottom:8px">${k.icon}</div>
+   <div style="font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${k.label}</div>
+   <div style="font-size:32px;font-weight:800;color:${k.color};line-height:1">${k.val}</div>
+   <div style="font-size:11px;color:var(--text-sub);margin-top:5px">${k.sub}</div>
+  </div>`;
+ });
+ h+=`</div>`;
+
+ function buildTable(arr,keyField,title,icon,badge){
+  const maxV=Math.max(...arr.map(r=>r[latest]||0),1);
+  let t=`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden">
+   <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px">
+    <span style="font-size:18px">${icon}</span>
+    <span style="font-weight:700;font-size:14px">${title}</span>
+    <span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span>
+   </div>
+   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+   <thead><tr style="background:var(--bg)">
+    <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">#</th>
+    <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
+  last7.forEach((d,i)=>{
+   const bg=i===last7.length-1?'background:#FFF0EB;color:var(--orange-dark,#C8461A)':'';
+   t+=`<th style="padding:8px 12px;text-align:right;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;
+  });
+  t+=`<th style="padding:8px 12px;text-align:right;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border)">Trend</th>
+  </tr></thead><tbody>`;
+  arr.forEach((row,idx)=>{
+   const name=row[keyField]||'—';
+   const isUnstable=unstableBCSet.has(name);
+   const rankColor=idx<3?'color:var(--orange);font-weight:700':'color:var(--text-sub)';
+   t+=`<tr style="border-bottom:1px solid var(--border)">
+    <td style="padding:8px 12px;${rankColor}">${idx+1}</td>
+    <td style="padding:8px 12px;font-weight:500">${name}${isUnstable?'<span style="display:inline-block;background:#FEE2E2;color:var(--red);border:1px solid #FECACA;border-radius:4px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:5px">⚠ bất ổn</span>':''}</td>`;
+   last7.forEach((d,i)=>{
+    const v=row[d]||0;
+    const isLatest=i===last7.length-1;
+    const barW=isLatest&&maxV>0?Math.round((v/maxV)*50):0;
+    if(isLatest){
+     t+=`<td style="padding:8px 12px;text-align:right;background:#FFF0EB"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px"><div style="height:5px;border-radius:3px;background:var(--orange);width:${barW}px;min-width:${v>0?2:0}px"></div><span style="font-weight:700;color:var(--orange-dark,#C8461A)">${v>0?v:'—'}</span></div></td>`;
+    } else {
+     t+=`<td style="padding:8px 12px;text-align:right;color:${v>0?'var(--text-main)':'var(--border)'}">${v>0?v:'—'}</td>`;
+    }
+   });
+   const curr=row[latest]||0;const prevRow=row[prev]||0;
+   const trendColor=curr<prevRow?'var(--green)':curr>prevRow?'var(--red)':'var(--text-sub)';
+   const trendTxt=curr<prevRow?`▼ ${prevRow-curr}`:curr>prevRow?`▲ ${curr-prevRow}`:'—';
+   t+=`<td style="padding:8px 12px;text-align:right;color:${trendColor};font-weight:600;white-space:nowrap">${trendTxt}</td></tr>`;
+  });
+  t+=`</tbody></table></div></div>`;
+  return t;
+ }
+
+ // Unstable BC table
+ const unstableMap={};
+ unstableRows.forEach(r=>{const bc=r[2],d=r[11];if(!unstableMap[bc])unstableMap[bc]={bc};unstableMap[bc][d]=(unstableMap[bc][d]||0)+1;});
+ const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ h+=buildTable(unstableArr,'bc','Bưu Cục Bất Ổn — Diễn biến 7 ngày','⚠️',`${unstableArr.length} bưu cục`);
+
+ // AM table
+ const amMap={};
+ recent.forEach(r=>{const am=r[10],d=r[11];if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+ const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ h+=buildTable(amArr,'am','Theo AM — 7 ngày gần nhất','👤',`${amArr.length} AM`);
+
+ // BC table
+ const bcMap={};
+ recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
+ const bcArr=Object.values(bcMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ h+=buildTable(bcArr,'bc','Theo Bưu Cục — 7 ngày gần nhất','🏪',`${bcArr.length} bưu cục`);
+
+ return`<div style="padding:4px 0">${h}</div>`;
+}
+
+async function buildAgingPage(){
+ const el=document.getElementById('p13');
+ try{
+  const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
+  if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+  const text=await resp.text();
+  const rows=parseCsvRaw(text);
+  el.innerHTML=buildAgingHTML(rows);
+ }catch(e){
+  el.innerHTML=errPage(`Aging sheet: ${e.message}`);
+ }
+}
+
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- ['p8','p9','p10','p11'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p8','p9','p10','p11','p13'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  await init();
 };
 
