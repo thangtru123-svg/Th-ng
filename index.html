@@ -224,6 +224,9 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
  <button class="nav-item" onclick="show('p11',this)"><span class="icon">🔄</span>Tỉ lệ trả (Kết thúc giao)</button>
  <button class="nav-item" onclick="show('p13',this)"><span class="icon">⏳</span>Aging &gt; 5 ngày</button>
+ <div class="nav-section">Ontime SLA TTS</div>
+ <button class="nav-item" onclick="show('p14',this)"><span class="icon">⏱️</span>Ontime giao TTS</button>
+ <button class="nav-item" onclick="show('p15',this)"><span class="icon">🚀</span>Ontime lấy TTS</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -239,6 +242,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 <div class="page" id="p11"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p12"></div>
 <div class="page" id="p13"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p14"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p15"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -261,6 +266,10 @@ const SHEET_TTS_AM='1n9Oxys1HPm6bgYIh6GO_B0Vhz2LikvM0n4t3QqP0ml0'; // TTS Giao -
 const SHEET_TTS_BC='1j6OLDLv5F4C-MHqI2vVRVfENGRnYlcZP2k_Z9fAl0Dg'; // TTS Giao - BC
 const SHEET_TLT_AM='1PZ_Kglh1-CIdQoMfF2pjc4MxjxE97-eT7qqYgn98F1A'; // Tỉ lệ trả - AM
 const SHEET_TLT_BC='1j1BHlG14NxnViEfuc8ttX48Wm3J5cN1CDOuAGunIaUs'; // Tỉ lệ trả - BC
+const SHEET_OTG_AM='1BAJ9cjpklSOsBOXHeRBUQMJYmxbCbDCL9P9RsmaTrI0'; // Ontime Giao - AM
+const SHEET_OTG_BC='1DjwtemKoInHsaIPjndTYYK1DxJOE2Xtmoq2BjQxvY0U'; // Ontime Giao - BC
+const SHEET_OTL_AM=''; // Ontime Lấy - AM (cần xuất)
+const SHEET_OTL_BC=''; // Ontime Lấy - BC (cần xuất)
 async function fetchExtSheet(id,retry=2){
  for(let i=0;i<=retry;i++){
   try{
@@ -564,6 +573,51 @@ function buildTiLeTraKTG(rowsAM,rowsBC){
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Tỉ Lệ Trả Theo Bưu Cục</div><div class="card-info">% Trả: Xanh ≤10% · Vàng ≤15% · Đỏ &gt;15% · Sắp xếp: cao → thấp</div></div>${buildBCSection(rowsBC)}</div>`;
 }
 
+// === ONTIME GIAO TTS (p14) & ONTIME LẤY TTS (p15) ===
+function buildOntime(rowsAM,rowsBC,pageTitle,volLabel,greenThr,yellowThr){
+ function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
+ function shortDate(d){const iso=isoDate(d);if(!iso)return d;const[y,mo,day]=iso.split('-');return`${day}/${mo}/${y}`;}
+ function buildTable(rows,nameLabel){
+  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const data=rows.slice(1).filter(r=>r[1]&&r[1].trim());
+  const dRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b&&!b.includes('grand total')&&!b.includes('tổng số');});
+  const gRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b.includes('grand total')||b.includes('tổng số');});
+  const allDates=[...new Set(dRows.map(r=>isoDate((r[2]||'').trim())).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const dates7=allDates.slice(0,7).reverse();
+  if(!dates7.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ngày</p>';
+  const pivot={};
+  dRows.forEach(r=>{
+   const name=(r[1]||'').trim();const date=isoDate((r[2]||'').trim());
+   if(!name||!dates7.includes(date))return;
+   if(!pivot[name])pivot[name]={};
+   const vol=Math.round(pnG(r[3]));const pct=pnG(r[4])*100;
+   pivot[name][date]={vol,pct};
+  });
+  const gPivot={};
+  gRows.forEach(r=>{const date=isoDate((r[2]||'').trim());if(!dates7.includes(date))return;const vol=Math.round(pnG(r[3]));const pct=pnG(r[4])*100;gPivot[date]={vol,pct};});
+  if(!Object.keys(gPivot).length){dates7.forEach(d=>{let tv=0,tw=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tw+=row[d].vol*row[d].pct/100;}});if(tv>0)gPivot[d]={vol:tv,pct:tw/tv*100};});}
+  const latest=dates7[dates7.length-1];
+  const names=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][latest]?pivot[a][latest].pct:999;const pB=pivot[b][latest]?pivot[b][latest].pct:999;return pA-pB;});
+  const cs='padding:4px 8px;';
+  let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:130px;${cs}">${nameLabel}</th>${dates7.map(d=>`<th colspan="2" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">${volLabel}</th><th style="text-align:center;${cs}">%Ontime</th>`).join('')}</tr></thead><tbody>`;
+  names.forEach((name,i)=>{
+   html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px;${cs}">${i+1}</td><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td>`;
+   dates7.forEach(d=>{const cell=pivot[name][d];if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=greenThr?'g':cell.pct>=yellowThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;${cs}">${fmt(cell.vol)}</td><td style="text-align:center;${cs}"><span class="pct ${c}">${p}%</span></td>`;}else{html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;color:var(--text-sub);${cs}">—</td><td style="${cs}">—</td>`;}});
+   html+='</tr>';
+  });
+  if(Object.keys(gPivot).length){
+   html+=`<tr class="tot"><td colspan="2" style="${cs}">Grand Total</td>`;
+   dates7.forEach(d=>{const cell=gPivot[d];if(cell){const p=cell.pct.toFixed(1);const c=cell.pct>=greenThr?'g':cell.pct>=yellowThr?'m':'b';html+=`<td style="text-align:right;border-left:1px solid #F3F4F6;${cs}">${fmt(cell.vol)}</td><td style="text-align:center;${cs}"><span class="pct ${c}">${p}%</span></td>`;}else{html+=`<td style="border-left:1px solid #F3F4F6;${cs}">—</td><td style="${cs}">—</td>`;} });
+   html+='</tr>';
+  }
+  html+='</tbody></table></div>';return html;
+ }
+ return`<div class="page-header"><div class="page-title">${pageTitle}</div>
+  <div class="page-meta"><span class="tag tag-orange">⏱️ 7 ngày gần nhất · ONTIME SLA TTS</span><span>%Ontime: Xanh ≥${greenThr}% · Vàng ≥${yellowThr}% · Đỏ &lt;${yellowThr}%</span></div></div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${buildTable(rowsAM,'AM')}</div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${buildTable(rowsBC,'Bưu Cục')}</div>`;
+}
+
 // splash
 function initSplash(){
  const container=document.getElementById('splashParticles');
@@ -772,6 +826,8 @@ async function init(){
  let xlC=null,xlD=null,xlErrC=null,xlErrD=null;
  let ttsAM=null,ttsBC=null,ttsErrAM=null,ttsErrBC=null;
  let tltAM=null,tltBC=null,tltErrAM=null,tltErrBC=null;
+ let otgAM=null,otgBC=null,otgErrAM=null,otgErrBC=null;
+ let otlAM=null,otlBC=null,otlErrAM=null,otlErrBC=null;
  const xlFetches=[
   fetchExtSheet(SHEET_XL_A).then(d=>xlA=d).catch(e=>xlErrA=e.message),
   fetchExtSheet(SHEET_XL_B).then(d=>xlB=d).catch(e=>xlErrB=e.message),
@@ -782,6 +838,10 @@ async function init(){
  if(SHEET_TTS_BC)xlFetches.push(fetchExtSheet(SHEET_TTS_BC).then(d=>ttsBC=d).catch(e=>ttsErrBC=e.message));
  if(SHEET_TLT_AM)xlFetches.push(fetchExtSheet(SHEET_TLT_AM).then(d=>tltAM=d).catch(e=>tltErrAM=e.message));
  if(SHEET_TLT_BC)xlFetches.push(fetchExtSheet(SHEET_TLT_BC).then(d=>tltBC=d).catch(e=>tltErrBC=e.message));
+ if(SHEET_OTG_AM)xlFetches.push(fetchExtSheet(SHEET_OTG_AM).then(d=>otgAM=d).catch(e=>otgErrAM=e.message));
+ if(SHEET_OTG_BC)xlFetches.push(fetchExtSheet(SHEET_OTG_BC).then(d=>otgBC=d).catch(e=>otgErrBC=e.message));
+ if(SHEET_OTL_AM)xlFetches.push(fetchExtSheet(SHEET_OTL_AM).then(d=>otlAM=d).catch(e=>otlErrAM=e.message));
+ if(SHEET_OTL_BC)xlFetches.push(fetchExtSheet(SHEET_OTL_BC).then(d=>otlBC=d).catch(e=>otlErrBC=e.message));
  await Promise.all(xlFetches);
  // Lưu vào global cache cho AI page
  window._D={xlA,xlB,xlC,xlD,ttsAM,ttsBC,tltAM,tltBC};
@@ -829,6 +889,26 @@ async function init(){
  buildAIPage();
  // Build p13 — Aging > 5 ngày
  buildAgingPage();
+ // Build p14 — Ontime Giao TTS
+ const p14el=document.getElementById('p14');
+ if(otgErrAM||otgErrBC){
+  p14el.innerHTML=errPage(`Ontime Giao: ${otgErrAM||''} ${otgErrBC||''}`.trim());
+ } else if(otgAM&&otgBC){
+  p14el.innerHTML=buildOntime(otgAM,otgBC,'Ontime Giao TTS','GTC',98,96);
+ } else {
+  p14el.innerHTML=errPage('Chưa có dữ liệu Ontime Giao — Sheet chưa được public hoặc chưa xuất.');
+ }
+ // Build p15 — Ontime Lấy TTS
+ const p15el=document.getElementById('p15');
+ if(!SHEET_OTL_AM||!SHEET_OTL_BC){
+  p15el.innerHTML=errPage('Chưa cấu hình Sheet Ontime Lấy — cần xuất từ ONTIME PICKUP (SLA TTS).');
+ } else if(otlErrAM||otlErrBC){
+  p15el.innerHTML=errPage(`Ontime Lấy: ${otlErrAM||''} ${otlErrBC||''}`.trim());
+ } else if(otlAM&&otlBC){
+  p15el.innerHTML=buildOntime(otlAM,otlBC,'Ontime Lấy TTS','LTC',90,80);
+ } else {
+  p15el.innerHTML=errPage('Chưa có dữ liệu Ontime Lấy — Sheet chưa được public hoặc chưa xuất.');
+ }
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();
  document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
@@ -980,7 +1060,7 @@ async function buildAgingPage(){
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- ['p8','p9','p10','p11','p13'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p8','p9','p10','p11','p13','p14','p15'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  await init();
 };
 
