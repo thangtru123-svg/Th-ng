@@ -846,7 +846,7 @@ function parseCsvRaw(text){
  });
 }
 
-function agingFmtDate(d){if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}`:d;}
+function agingFmtDate(d){if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;}
 
 function buildAgingHTML(rows){
  const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
@@ -868,8 +868,8 @@ function buildAgingHTML(rows){
  const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
  let h=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px">`;
  const kpis=[
-  {icon:'📦',label:'Tổng Aging hôm nay',val:latestTotal.toLocaleString(),sub:agingFmtDate(latest)+'/2026',color:'var(--orange)'},
-  {icon:'📅',label:'Tổng Aging N-1',val:prevTotal.toLocaleString(),sub:agingFmtDate(prev)+'/2026',color:'var(--blue,#3182CE)'},
+  {icon:'📦',label:'Tổng Aging hôm nay',val:latestTotal.toLocaleString(),sub:agingFmtDate(latest),color:'var(--orange)'},
+  {icon:'📅',label:'Tổng Aging N-1',val:prevTotal.toLocaleString(),sub:agingFmtDate(prev),color:'var(--blue,#3182CE)'},
   {icon:delta<0?'📉':'📈',label:'Tăng / Giảm so N-1',val:`${deltaIcon} ${Math.abs(delta).toLocaleString()}`,sub:`${deltaSign}${delta} đơn so hôm qua`,color:deltaColor},
   {icon:'⚠️',label:'Aging BC bất ổn (hôm nay)',val:unstableLatest.toLocaleString(),sub:`${unstableBCSet.size} bưu cục bất ổn`,color:'var(--red)'},
  ];
