@@ -247,16 +247,16 @@ function parseCSV(text){return text.trim().split('\n').filter(l=>l.trim()).map(l
 function errPage(msg){return`<div class="error-box">⚠️ Không thể tải dữ liệu: ${msg}<br><small>Kiểm tra kết nối mạng hoặc quyền truy cập Google Sheet.</small></div>`;}
 
 // === XỬ LÝ THÀNH CÔNG (p8) ===
-const SHEET_XL_A='1fXqMj-SnBaR-LXeCgEKSQRqvwChayO_fEPojzgxFejM';
-const SHEET_XL_B='1vzA8eugWZz8evIJBF4XiJq9rOve6q-7q6RXOL2YdMls';
+const SHEET_XL_A='13Db4y1xGRsZQI3xRDIjhIxxCDx8GNU0B_LTmorQDeQ8';
+const SHEET_XL_B='1WEBW0hXdKSK1JKiehMlSpjaKezNB3xJ3HeNvT-9ZMpA';
 // Sheet Bưu Cục (cần điền ID sau khi xuất từ GHN Looker ở cấp BC)
-const SHEET_XL_C='1hoDUmbvW6ZzftEl1En6ziOS0XuLpzu20yb29zhQdRgk'; // Lấy - BC
-const SHEET_XL_D='1ZQRuQLs-gw5XXg1dXCt29RhSSScy6Es6e6RGoWiNmf4'; // Giao - BC
+const SHEET_XL_C='1LaBA_B9wo2ptF2VOmzeH9uzrZe0x4u5ymIiX6ahRInw'; // Lấy - BC
+const SHEET_XL_D='1yi0sjWp29bwPOR3E-YLkr4njCbWTm15NoUge3AQIXkQ'; // Giao - BC
 // Sheet TTS (Section B - Giao, chỉ lọc Loại khách hàng = TTS)
-const SHEET_TTS_AM='1HI7uK9YlhfZg9JoDxqbVffEUD0fMBIaVwSm2Hb8FMHI'; // TTS Giao - AM
-const SHEET_TTS_BC='1GKVbncNYdQ9S6w5zR9rhAxmLTfhYP7bknYNjlQ9MAT0'; // TTS Giao - BC
-const SHEET_TLT_AM='1BUyLdJB7CjqbbLOt31w2vtfZL55aR8VqzJ1l3fndoWY'; // Tỉ lệ trả - AM
-const SHEET_TLT_BC='1yOJnix4LFjQPZIVfhQrLLxXW6gmYpk8UarXJcj9b8Zw'; // Tỉ lệ trả - BC
+const SHEET_TTS_AM='1n9Oxys1HPm6bgYIh6GO_B0Vhz2LikvM0n4t3QqP0ml0'; // TTS Giao - AM
+const SHEET_TTS_BC='1j6OLDLv5F4C-MHqI2vVRVfENGRnYlcZP2k_Z9fAl0Dg'; // TTS Giao - BC
+const SHEET_TLT_AM='1PZ_Kglh1-CIdQoMfF2pjc4MxjxE97-eT7qqYgn98F1A'; // Tỉ lệ trả - AM
+const SHEET_TLT_BC='1j1BHlG14NxnViEfuc8ttX48Wm3J5cN1CDOuAGunIaUs'; // Tỉ lệ trả - BC
 async function fetchExtSheet(id,retry=2){
  for(let i=0;i<=retry;i++){
   try{
@@ -499,7 +499,7 @@ function buildTTSGiao(rowsAM,rowsBC){
 // === TỈ LỆ TRẢ (KẾT THÚC GIAO) (p11) ===
 function buildTiLeTraKTG(rowsAM,rowsBC){
  // Tổng cộng % Trả đọc từ GHN live dashboard (cập nhật thủ công)
- const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6};
+ const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6,'2026-06-21':11.8};
  function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d.slice(0,10);}
  function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
  function buildAMSection(rows){
@@ -686,7 +686,7 @@ function gatherDashboardData(){
   lines.push('\n=== C. TỈ LỆ TRẢ HÀNG THEO AM (ngày gần nhất: '+latestDate+') ===');
   amRet.slice(0,10).forEach(a=>lines.push(`  ${a.name}: %Trả=${a.ret.toFixed(1)}%`));
   // Tổng cộng TONG_CONG
-  const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6};
+  const TONG_CONG={'2026-06-14':9.0,'2026-06-15':9.5,'2026-06-16':10.2,'2026-06-17':9.8,'2026-06-18':9.7,'2026-06-19':9.7,'2026-06-20':10.6,'2026-06-21':11.8};
   const recentDates=dates.map(d=>isoDate(d)).filter(d=>TONG_CONG[d]);
   if(recentDates.length)lines.push('  Tổng cộng (7 ngày): '+recentDates.map(d=>`${d.slice(5)}=${TONG_CONG[d]}%`).join(', '));
  }
