@@ -29,10 +29,12 @@
 | p11 | Tỉ lệ trả (Kết thúc giao) | SHEET_TLT_AM + SHEET_TLT_BC |
 | p13 | Aging > 5 ngày | Google Sheet riêng (export CSV) |
 | p12 | AI - Phân tích tổng quan | Groq API |
+| p14 | Ontime Giao TTS | SHEET_OTG_AM + SHEET_OTG_BC |
+| p15 | Ontime Lấy TTS | SHEET_OTL_AM + SHEET_OTL_BC |
 
 ---
 
-## Sheet IDs (trong index.html ~line 250-259)
+## Sheet IDs (trong index.html ~line 260-272)
 
 ```javascript
 const SHEET_XL_A  = '13Db4y1xGRsZQI3xRDIjhIxxCDx8GNU0B_LTmorQDeQ8';
@@ -43,6 +45,10 @@ const SHEET_TTS_AM= '1n9Oxys1HPm6bgYIh6GO_B0Vhz2LikvM0n4t3QqP0ml0'; // TTS Giao 
 const SHEET_TTS_BC= '1j6OLDLv5F4C-MHqI2vVRVfENGRnYlcZP2k_Z9fAl0Dg'; // TTS Giao - BC
 const SHEET_TLT_AM= '1PZ_Kglh1-CIdQoMfF2pjc4MxjxE97-eT7qqYgn98F1A'; // Tỉ lệ trả - AM
 const SHEET_TLT_BC= '1j1BHlG14NxnViEfuc8ttX48Wm3J5cN1CDOuAGunIaUs'; // Tỉ lệ trả - BC
+const SHEET_OTG_AM= '1BAJ9cjpklSOsBOXHeRBUQMJYmxbCbDCL9P9RsmaTrI0'; // Ontime Giao - AM
+const SHEET_OTG_BC= '1DjwtemKoInHsaIPjndTYYK1DxJOE2Xtmoq2BjQxvY0U'; // Ontime Giao - BC
+const SHEET_OTL_AM= '13-2HDi4b5URdvvJlz6rYkTe9ot1isSImkOTuFfxqPPI'; // Ontime Lấy - AM
+const SHEET_OTL_BC= '1UuQHYdFx_8APXS-soTOesfLLYehpNTH8SO7JgxPQM8k'; // Ontime Lấy - BC
 ```
 
 ---
@@ -77,8 +83,27 @@ const SHEET_TLT_BC= '1j1BHlG14NxnViEfuc8ttX48Wm3J5cN1CDOuAGunIaUs'; // Tỉ lệ
 1. Vào đúng tab **"Tỉ lệ trả (Kết thúc giao)"** (không phải "Tỉ lệ trả")
 2. Report TLT: `fcc2cc6e-17c0-4cf8-9c88-1258e4a76e48`, page: `p_b5du2yhowd`
 3. Report XL/TTS: `5c7ad323-d293-4da2-9d88-d77034000af7`
-4. **Cách xuất**: Chuột phải vào bảng → "Xuất biểu đồ" → "Xuất dữ liệu" → "Google Trang tính"
-5. Lấy Sheet ID từ URL của file vừa tạo
+4. **Report Ontime**: `b8742a59-eda0-477f-8352-ac3bbcdb5ded`, page ONTIME PICKUP: `p_cojbhmb6gd`
+5. **Cách xuất**: Chuột phải vào bảng → "Xuất biểu đồ" → "Xuất dữ liệu" → "Google Trang tính"
+6. Lấy Sheet ID từ URL của file vừa tạo
+
+---
+
+## Xuất ONTIME PICKUP (SLA TTS) — p14 & p15
+
+- **Link báo cáo**: https://baocao.ghn.vn/dashboards/63bd175cd4435a369fade8bd → mục 8 "ONTIME PICKUP (SLA TTS)"
+- **Vấn đề cross-origin iframe**: Chrome MCP KHÔNG click được vào iframe Looker Studio từ baocao.ghn.vn
+- **Cách giải quyết**: Lấy `src` của iframe → mở tab mới trực tiếp tới URL đó (có session params) → click được bình thường
+- **Session params**: `{"session":{"id0":"3206259966",...,"id30":"3206259966"}}` (31 keys, tất cả cùng value)
+- **Scroll trong Looker Studio**: KHÔNG dùng `window.scrollTo()` — phải dùng `document.querySelector('.mainBlock').scrollTop = value` hoặc `el.scrollIntoView()`
+
+### Quy trình xuất LOGIC MỚI (Ontime Lấy):
+1. Mở tab embed Looker Studio (với session params)
+2. Kéo xuống phần **LOGIC MỚI** ở cuối trang
+3. Chọn filter: **Loại: Ngày** | **Chi tiết: AM** (hoặc Bưu Cục) | **Loại khách: TTS** (bỏ chọn tất cả → chọn TTS)
+4. Chuột phải vào bảng LOGIC MỚI → Xuất biểu đồ → Xuất dữ liệu → Google Trang tính → Xuất
+5. Lặp lại với Chi tiết: Bưu Cục để có sheet BC
+- **Lưu ý**: Bảng LOGIC CŨ (trên) chỉ có CSV, KHÔNG có Google Trang tính — phải dùng bảng LOGIC MỚI
 
 ---
 
@@ -99,6 +124,9 @@ const SHEET_TLT_BC= '1j1BHlG14NxnViEfuc8ttX48Wm3J5cN1CDOuAGunIaUs'; // Tỉ lệ
 | Xuất nhầm bảng Looker | Phải chọn đúng trang "Tỉ lệ trả (Kết thúc giao)" |
 | Ngày hiển thị sai format | `agingFmtDate`: `${p[2]}/${p[1]}/${p[0]}` |
 | Push origin bị che bởi dock | Dùng `key: cmd+Return` để commit khi GitHub Desktop focus |
+| Chrome MCP không click được vào Looker Studio | Looker Studio nằm trong cross-origin iframe → mở tab mới với URL embed trực tiếp |
+| Scroll Looker Studio không hoạt động | Dùng `.mainBlock` container, không phải `window` |
+| "Xuất dữ liệu" bị grayed out | Đang right-click bảng LOGIC CŨ — phải right-click bảng LOGIC MỚI |
 
 ---
 
