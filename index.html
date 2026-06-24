@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Báo Cáo Vận Hành XBG</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{--orange:#F15D29;--orange-dark:#C8461A;--orange-light:#FFF0EB;--orange-mid:#FFD5C2;--sidebar-w:204px;--text-main:#1C1C1E;--text-sub:#6B7280;--border:#E5E7EB;--bg:#F4F6F9;--card:#FFFFFF;--shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;--green:#16A34A;--yellow:#D97706;--red:#DC2626;--green-bg:#DCFCE7;--yellow-bg:#FEF9C3;--red-bg:#FEE2E2}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -169,8 +170,10 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
   <div class="logo-sub">Báo Cáo Vận Hành XBG</div>
   <div class="logo-author">Người làm: Phạm Đức Thắng</div>
  </div>
+ <div class="nav-section">Tổng Quan</div>
+ <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <div class="nav-section">GTC</div>
- <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
+ <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
  <div class="nav-section">Tỉ Lệ Trả</div>
  <button class="nav-item" onclick="show('p3',this)"><span class="icon">📅</span>TLT theo Ngày</button>
@@ -189,7 +192,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 </nav>
 
 <main class="main">
- <div class="page active" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -656,6 +660,158 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>`;
 }
 
+/* ===== DASHBOARD 0: TỔNG QUAN ===== */
+window._charts={};
+window._agingRows=null;
+window._ovAgingByDate={};
+window._ovAgingDates=[];
+window._ovOdrByDate={};
+window._ovOprByDate={};
+window._ovOntimeDates=[];
+function destroyChart(id){if(window._charts[id]){window._charts[id].destroy();delete window._charts[id];}}
+
+function renderChartGTC(dates,byDate){
+ destroyChart('gtc');
+ const canvas=document.getElementById('chartGTC');if(!canvas||!dates.length)return;
+ const labels=dates.map(d=>shortD(d));
+ const vols=dates.map(d=>byDate[d]?.vol??null);
+ const gans=dates.map(d=>byDate[d]?.gan!=null?+byDate[d].gan.toFixed(1):null);
+ const gtcs=dates.map(d=>byDate[d]?.gtc!=null?+byDate[d].gtc.toFixed(1):null);
+ window._charts['gtc']=new Chart(canvas,{
+  data:{labels,datasets:[
+   {type:'bar',label:'Volume',data:vols,backgroundColor:'rgba(241,93,41,0.15)',borderColor:'#F15D29',borderWidth:1.5,yAxisID:'yVol',order:2},
+   {type:'line',label:'%Gán',data:gans,borderColor:'#3B82F6',backgroundColor:'transparent',tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2.5,yAxisID:'yPct',order:1},
+   {type:'line',label:'%GTC',data:gtcs,borderColor:'#16A34A',backgroundColor:'transparent',tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2.5,yAxisID:'yPct',order:1}
+  ]},
+  options:{responsive:true,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'top',labels:{font:{size:12},padding:16}},
+    tooltip:{callbacks:{label:ctx=>{const v=ctx.raw;if(ctx.dataset.yAxisID==='yPct')return` ${ctx.dataset.label}: ${v}%`;return` Volume: ${(v||0).toLocaleString('vi-VN')}`;}}
+   }},
+   scales:{
+    yVol:{type:'linear',position:'left',title:{display:true,text:'Volume'},grid:{color:'#F3F4F6'},ticks:{font:{size:11}}},
+    yPct:{type:'linear',position:'right',min:0,max:100,title:{display:true,text:'%'},grid:{drawOnChartArea:false},ticks:{font:{size:11},callback:v=>v+'%'}},
+    x:{grid:{color:'#F3F4F6'},ticks:{font:{size:11},maxRotation:45}}
+   }
+  }
+ });
+ const latest=dates[dates.length-1],prev=dates[dates.length-2];
+ const lg=byDate[latest],lp=prev?byDate[prev]:null;
+ let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> Vol <strong>${fmt(lg?.vol)}</strong> · %Gán <strong>${(lg?.gan??0).toFixed(1)}%</strong> · %GTC <strong style="color:${(lg?.gtc??0)>=65?'var(--green)':(lg?.gtc??0)>=50?'var(--yellow)':'var(--red)'">${(lg?.gtc??0).toFixed(1)}%</strong>.`;
+ if(lp){const dVol=(lg?.vol??0)-(lp?.vol??0);const dGTC=(lg?.gtc??0)-(lp?.gtc??0);
+  ana+=` So với ${shortD(prev)}: Vol <span style="color:${dVol>=0?'var(--red)':'var(--green)'};font-weight:700">${dVol>=0?'+':''}${fmt(dVol)}</span> · %GTC <span style="color:${dGTC>=0?'var(--green)':'var(--red)'};font-weight:700">${dGTC>=0?'+':''}${dGTC.toFixed(1)}%</span>.`;
+ }
+ const anaEl=document.getElementById('anaGTC');if(anaEl)anaEl.innerHTML=ana;
+}
+
+function renderChartAging(){
+ destroyChart('aging');
+ const canvas=document.getElementById('chartAging');if(!canvas)return;
+ const allDates=window._ovAgingDates;const byDate=window._ovAgingByDate;
+ if(!allDates.length){if(canvas.parentElement)canvas.parentElement.innerHTML='<p style="padding:16px;color:var(--text-sub)">Chưa có dữ liệu Aging</p>';return;}
+ const dFrom=document.getElementById('ovAging_dFrom')?.value||allDates[0];
+ const dTo=document.getElementById('ovAging_dTo')?.value||allDates[allDates.length-1];
+ const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
+ const selDates=allDates.filter(d=>d>=lo&&d<=hi);
+ if(!selDates.length)return;
+ const labels=selDates.map(d=>agingFmtDate(d));
+ const totals=selDates.map(d=>byDate[d]?.total??0);
+ const unstables=selDates.map(d=>byDate[d]?.unstable??0);
+ const stables=selDates.map((d,i)=>totals[i]-unstables[i]);
+ window._charts['aging']=new Chart(canvas,{
+  type:'line',
+  data:{labels,datasets:[
+   {label:'Tổng Aging',data:totals,borderColor:'#F15D29',backgroundColor:'rgba(241,93,41,0.08)',tension:0.4,fill:true,pointRadius:4,borderWidth:2.5},
+   {label:'BC Ổn định',data:stables,borderColor:'#16A34A',backgroundColor:'transparent',tension:0.4,pointRadius:4,borderWidth:2.5},
+   {label:'BC Bất ổn',data:unstables,borderColor:'#DC2626',backgroundColor:'rgba(220,38,38,0.08)',tension:0.4,fill:true,pointRadius:4,borderWidth:2.5,borderDash:[5,3]}
+  ]},
+  options:{responsive:true,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'top',labels:{font:{size:12},padding:16}}},
+   scales:{y:{title:{display:true,text:'Số đơn Aging'},grid:{color:'#F3F4F6'},ticks:{font:{size:11}}},x:{grid:{color:'#F3F4F6'},ticks:{font:{size:11},maxRotation:45}}}
+  }
+ });
+ const latest=selDates[selDates.length-1],prev=selDates[selDates.length-2];
+ const lg=byDate[latest],lp=prev?byDate[prev]:null;
+ let ana=`⏳ <strong>${agingFmtDate(latest)}:</strong> Tổng <strong style="color:var(--orange)">${lg?.total??0}</strong> đơn · BC bất ổn <strong style="color:var(--red)">${lg?.unstable??0}</strong> · BC ổn định <strong style="color:var(--green)">${(lg?.total??0)-(lg?.unstable??0)}</strong>.`;
+ if(lp){const diff=(lg?.total??0)-(lp?.total??0);ana+=` So hôm trước: <span style="color:${diff<0?'var(--green)':diff>0?'var(--red)':'var(--text-sub)'};font-weight:700">${diff>0?'+':''}${diff}</span> đơn.`;}
+ const anaEl=document.getElementById('anaAging');if(anaEl)anaEl.innerHTML=ana;
+}
+
+function renderChartOntime(){
+ destroyChart('ontime');
+ const canvas=document.getElementById('chartOntime');if(!canvas)return;
+ const dates=window._ovOntimeDates;const odrBD=window._ovOdrByDate;const oprBD=window._ovOprByDate;
+ if(!dates.length)return;
+ const labels=dates.map(d=>shortD(d));
+ const odrPcts=dates.map(d=>odrBD[d]?.vol>0?+(odrBD[d].cnt/odrBD[d].vol*100).toFixed(1):null);
+ const oprPcts=dates.map(d=>oprBD[d]?.vol>0?+(oprBD[d].cnt/oprBD[d].vol*100).toFixed(1):null);
+ window._charts['ontime']=new Chart(canvas,{
+  type:'line',
+  data:{labels,datasets:[
+   {label:'ODR % Ontime',data:odrPcts,borderColor:'#3B82F6',backgroundColor:'rgba(59,130,246,0.06)',tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2.5,fill:true},
+   {label:'OPR % Ontime',data:oprPcts,borderColor:'#8B5CF6',backgroundColor:'rgba(139,92,246,0.06)',tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2.5,fill:true}
+  ]},
+  options:{responsive:true,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'top',labels:{font:{size:12},padding:16}},
+    tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%`}}
+   },
+   scales:{y:{min:50,max:100,title:{display:true,text:'% Ontime'},grid:{color:'#F3F4F6'},ticks:{font:{size:11},callback:v=>v+'%'}},x:{grid:{color:'#F3F4F6'},ticks:{font:{size:11},maxRotation:45}}}
+  }
+ });
+ const latest=dates[dates.length-1];
+ const oLg=odrBD[latest],pLg=oprBD[latest];
+ const oP=oLg?.vol>0?(oLg.cnt/oLg.vol*100).toFixed(1):'—';
+ const pP=pLg?.vol>0?(pLg.cnt/pLg.vol*100).toFixed(1):'—';
+ const anaEl=document.getElementById('anaOntime');
+ if(anaEl)anaEl.innerHTML=`⏱️ <strong>Ngày ${shortD(latest)}:</strong> ODR Ontime <strong style="color:${+oP>=98?'var(--green)':+oP>=96?'var(--yellow)':'var(--red)'}">${oP}%</strong> (Vol: ${oLg?.vol?fmt(oLg.vol):'—'}) · OPR Ontime <strong style="color:${+pP>=90?'var(--green)':+pP>=80?'var(--yellow)':'var(--red)'}">${pP}%</strong> (Vol: ${pLg?.vol?fmt(pLg.vol):'—'}).`;
+}
+
+function buildOverviewPage(){
+ const el=document.getElementById('p0');if(!el)return;
+ // GTC Grand Total
+ const gtcRows=(window._D.gtcTotalAM||[]).slice(1).filter(r=>(r[0]||'').toLowerCase().includes('grand total')&&r.length>4);
+ const gtcByDate={};
+ gtcRows.forEach(r=>{const d=isoD(r[1]);if(d)gtcByDate[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100};});
+ const gtcDates=Object.keys(gtcByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
+ // Ontime aggregate
+ function getOntimeGT(rows){const bd={};(rows||[]).slice(1).forEach(r=>{if((r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim()||r.length<5)return;const d=isoD(r[1]);if(!d)return;if(!bd[d])bd[d]={vol:0,cnt:0};bd[d].vol+=Math.round(parseFloat(r[2])||0);bd[d].cnt+=Math.round(parseFloat(r[4])||0);});return bd;}
+ window._ovOdrByDate=getOntimeGT(window._D.odrAM);
+ window._ovOprByDate=getOntimeGT(window._D.oprAM);
+ window._ovOntimeDates=[...new Set([...Object.keys(window._ovOdrByDate),...Object.keys(window._ovOprByDate)])].sort((a,b)=>a.localeCompare(b)).slice(-15);
+ // Aging
+ const agingByDate={};
+ (window._agingRows||[]).forEach(r=>{const d=r[11];if(!d||!d.match(/^\d{4}-\d{2}-\d{2}$/))return;if(!agingByDate[d])agingByDate[d]={total:0,unstable:0};agingByDate[d].total++;if((r[12]||'').includes('bất ổn'))agingByDate[d].unstable++;});
+ window._ovAgingByDate=agingByDate;
+ window._ovAgingDates=Object.keys(agingByDate).sort((a,b)=>a.localeCompare(b));
+ const aLen=window._ovAgingDates.length;
+ const agTo=window._ovAgingDates[aLen-1]||'';
+ const agFrom=window._ovAgingDates[Math.max(0,aLen-15)]||'';
+ const mkAO=sv=>window._ovAgingDates.map(d=>`<option value="${d}"${d===sv?' selected':''}>${agingFmtDate(d)}</option>`).join('');
+ el.innerHTML=`<div class="page-header">
+  <div class="page-title">📊 Dashboard Tổng Quan</div>
+  <div class="page-meta"><span class="tag tag-orange">📈 Xu hướng theo ngày · Tổng hợp các chỉ số chính</span></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>GTC Total – Volume & Tỉ Lệ (15 ngày gần nhất)</div><div class="card-info">Grand Total · %Gán · %GTC</div></div>
+  <div style="padding:16px 20px"><canvas id="chartGTC" style="max-height:300px"></canvas></div>
+  <div id="anaGTC" class="analysis-box" style="margin:0 16px 16px"></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">⏳</div>Aging &gt; 5 Ngày – Xu Hướng</div><div class="card-info">Tổng · BC Ổn định · BC Bất ổn</div></div>
+  <div class="date-filter-bar">
+   <label>Từ ngày:</label><select id="ovAging_dFrom" onchange="renderChartAging()">${mkAO(agFrom)}</select>
+   <label>Đến ngày:</label><select id="ovAging_dTo" onchange="renderChartAging()">${mkAO(agTo)}</select>
+  </div>
+  <div style="padding:16px 20px"><canvas id="chartAging" style="max-height:300px"></canvas></div>
+  <div id="anaAging" class="analysis-box" style="margin:0 16px 16px"></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>ODR & OPR TTS – % Ontime (15 ngày gần nhất)</div><div class="card-info">Tổng hợp tất cả AM</div></div>
+  <div style="padding:16px 20px"><canvas id="chartOntime" style="max-height:300px"></canvas></div>
+  <div id="anaOntime" class="analysis-box" style="margin:0 16px 16px"></div>
+ </div>`;
+ setTimeout(()=>{renderChartGTC(gtcDates,gtcByDate);renderChartAging();renderChartOntime();},50);
+}
+
 /* ===== SPLASH ===== */
 function initSplash(){
  const c=document.getElementById('splashParticles');
@@ -726,6 +882,7 @@ async function buildAgingPage(){
   const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
   if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
   const rows=parseCsvRaw(await resp.text());
+  window._agingRows=rows;
   el.innerHTML=buildAgingHTML(rows);
  }catch(e){el.innerHTML=errPage(`Aging sheet: ${e.message}`);}
 }
@@ -886,17 +1043,20 @@ async function init(){
  if(R['OPR TTS - AM']&&R['OPR TTS - Bưu Cục'])
   p6el.innerHTML=buildOntimePage(R['OPR TTS - AM'],R['OPR TTS - Bưu Cục'],'Tổng quan OPR TTS','Vol LTC','LTC đúng Ontime',90,80);
  else p6el.innerHTML=errPage('Không thể tải OPR TTS. Kiểm tra sheet "OPR TTS - AM" / "OPR TTS - Bưu Cục".');
- // p7 — Aging
- buildAgingPage();
+ // p7 — Aging (await để có data cho overview)
+ await buildAgingPage();
  // p12 — AI
  buildAIPage();
+ // p0 — Tổng quan (sau khi có đủ data)
+ buildOverviewPage();
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
- ['p1','p2','p3','p4','p5','p6','p7'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p0','p1','p2','p3','p4','p5','p6','p7'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['gtc','aging','ontime'].forEach(id=>destroyChart(id));
  await init();
 };
 
