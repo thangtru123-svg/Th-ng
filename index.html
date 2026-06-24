@@ -696,7 +696,7 @@ function renderChartGTC(dates,byDate){
  });
  const latest=dates[dates.length-1],prev=dates[dates.length-2];
  const lg=byDate[latest],lp=prev?byDate[prev]:null;
- let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> Vol <strong>${fmt(lg?.vol)}</strong> · %Gán <strong>${(lg?.gan??0).toFixed(1)}%</strong> · %GTC <strong style="color:${(lg?.gtc??0)>=65?'var(--green)':(lg?.gtc??0)>=50?'var(--yellow)':'var(--red)'">${(lg?.gtc??0).toFixed(1)}%</strong>.`;
+ let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> Vol <strong>${fmt(lg?.vol)}</strong> · %Gán <strong>${(lg?.gan??0).toFixed(1)}%</strong> · %GTC <strong style="color:${(lg?.gtc??0)>=65?'var(--green)':(lg?.gtc??0)>=50?'var(--yellow)':'var(--red)'}">${(lg?.gtc??0).toFixed(1)}%</strong>.`;
  if(lp){const dVol=(lg?.vol??0)-(lp?.vol??0);const dGTC=(lg?.gtc??0)-(lp?.gtc??0);
   ana+=` So với ${shortD(prev)}: Vol <span style="color:${dVol>=0?'var(--red)':'var(--green)'};font-weight:700">${dVol>=0?'+':''}${fmt(dVol)}</span> · %GTC <span style="color:${dGTC>=0?'var(--green)':'var(--red)'};font-weight:700">${dGTC>=0?'+':''}${dGTC.toFixed(1)}%</span>.`;
  }
