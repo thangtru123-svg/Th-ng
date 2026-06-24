@@ -227,201 +227,230 @@ async function fetchSheet(name,retry=2){
 /* ===== DASHBOARD 1 & 2: GTC ===== */
 // rowsAM cols: name(0), Ngày(1), Volume(2), Tỉ lệ gán(3), Tỉ lệ GTC(4), Số đơn GTC(5)
 // rowsBC cols: AM(0), Bưu Cục(1), Ngày(2), Volume(3), Tỉ lệ gán(4), Tỉ lệ GTC(5), Số đơn GTC(6)
-function buildGTCPage(rowsAM,rowsBC,title){
- function amTable(rows){
-  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
-  const data=rows.slice(1).filter(r=>r.length>4&&(r[0]||'').trim());
-  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
-  const amRows=data.filter(r=>!isGrand(r));
-  const gRows=data.filter(r=>isGrand(r));
-  const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,15).reverse();
-  if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
-  const pivot={};
-  amRows.forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]);if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
-  const gPivot={};
-  gRows.forEach(r=>{const d=isoD(r[1]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
-  const latest=dates[dates.length-1];
-  const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.gtc??-1)-(pivot[b][latest]?.gtc??-1));
-  const cs='padding:6px 9px;';
-  const stickyHdr='position:sticky;left:0;z-index:3;background:#FEEDE4;';
-  const stickyHdr2='position:sticky;left:32px;z-index:3;background:#FEEDE4;';
-  let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead>
-   <tr>
-    <th rowspan="2" style="${cs}${stickyHdr}width:32px;text-align:center">STT</th>
-    <th rowspan="2" style="${cs}${stickyHdr2}min-width:130px">AM</th>
-    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
-   </tr>
-   <tr>
-    ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
-   </tr>
-  </thead><tbody>`;
-  names.forEach((name,i)=>{
-   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:32px;background:#fff;z-index:2">${name}</td>`;
-   dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
-   h+='</tr>';
-  });
-  if(Object.keys(gPivot).length){
-   h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>`;
-   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
-   h+='</tr>';
-  }
-  h+='</tbody></table></div>';
-  const lg=gPivot[latest];
-  if(lg){
-   const best=names[names.length-1],worst=names[0];
-   h+=`<div class="analysis-box">📊 <strong>Ngày ${shortD(latest)}:</strong> Tổng Vol <strong>${fmt(lg.vol)}</strong> đơn · GTC <strong>${fmt(lg.nGTC)}</strong> đơn (<span style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'};font-weight:700">${lg.gtc.toFixed(1)}%</span>) · %Gán ${lg.gan.toFixed(1)}%.${names.length>1?` AM tốt nhất: <strong>${best}</strong> (${(pivot[best]?.[latest]?.gtc??0).toFixed(1)}%) · Cần chú ý: <strong>${worst}</strong> (${(pivot[worst]?.[latest]?.gtc??0).toFixed(1)}%).`:''}</div>`;
-  }
-  return h;
+window._GTC={};
+function getDOW(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()]||'';}
+function shortDDow(iso){return iso?`${shortD(iso)} (${getDOW(iso)})`:'—';}
+function renderGTCAmTable(rows,dates){
+ if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+ const data=rows.slice(1).filter(r=>r.length>4&&(r[0]||'').trim());
+ const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
+ const amRows=data.filter(r=>!isGrand(r));
+ const gRows=data.filter(r=>isGrand(r));
+ const pivot={};
+ amRows.forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]);if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
+ const gPivot={};
+ gRows.forEach(r=>{const d=isoD(r[1]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
+ const latest=dates[0];
+ const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]?.gtc??-1)-(pivot[a][latest]?.gtc??-1));
+ const cs='padding:6px 9px;';
+ const sH='position:sticky;left:0;z-index:3;background:#FEEDE4;';
+ const sH2='position:sticky;left:32px;z-index:3;background:#FEEDE4;';
+ let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead>
+  <tr>
+   <th rowspan="2" style="${cs}${sH}width:32px;text-align:center">STT</th>
+   <th rowspan="2" style="${cs}${sH2}min-width:130px">AM</th>
+   ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
+  </tr>
+  <tr>
+   ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
+  </tr>
+ </thead><tbody>`;
+ names.forEach((name,i)=>{
+  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:32px;background:#fff;z-index:2">${name}</td>`;
+  dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
+  h+='</tr>';
+ });
+ if(Object.keys(gPivot).length){
+  h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>`;
+  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
+  h+='</tr>';
  }
- function bcTable(rows){
-  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
-  const data=rows.slice(1).filter(r=>r.length>5&&(r[1]||'').trim());
-  const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
-  const bcRows=data.filter(r=>!isGrand(r));
-  const gRows=data.filter(r=>isGrand(r));
-  const allD=[...new Set(data.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,15).reverse();
-  if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
-  const pivot={};
-  bcRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
-  const gPivot={};
-  gRows.forEach(r=>{const d=isoD(r[2]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
-  const latest=dates[dates.length-1];
-  const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.gtc??-1)-(pivot[b][latest]?.gtc??-1));
-  const cs='padding:5px 8px;';
-  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:1100px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
-   <tr>
-    <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
-    <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
-    <th rowspan="2" style="${cs}min-width:90px;position:sticky;left:170px;z-index:5;background:#FEEDE4">AM</th>
-    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
-   </tr>
-   <tr>
-    ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
-   </tr>
-  </thead><tbody>`;
-  names.forEach((name,i)=>{
-   const row=pivot[name];
-   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
-   dates.forEach(d=>{const c=row[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
-   h+='</tr>';
-  });
-  if(Object.keys(gPivot).length){
-   h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td colspan="2" style="${cs}position:sticky;left:30px;background:#F8F9FA;z-index:2">Grand Total</td>`;
-   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
-   h+='</tr>';
-  }
-  h+='</tbody></table></div>';
-  const lg=gPivot[latest];
-  if(lg){h+=`<div class="analysis-box">🏪 <strong>BC ngày ${shortD(latest)}:</strong> ${names.length} bưu cục có data · Grand Total Vol <strong>${fmt(lg.vol)}</strong> · GTC <strong>${fmt(lg.nGTC)}</strong> đơn (<span style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'};font-weight:700">${lg.gtc.toFixed(1)}%</span>).</div>`;}
-  return h;
+ h+='</tbody></table></div>';
+ const lg=gPivot[latest];const prev=dates[1];const lg2=prev?gPivot[prev]:null;
+ let ana='';
+ if(names.length>0){
+  const best=names[0],worst=names[names.length-1];
+  ana+=`📊 Ngày ${shortD(latest)}: AM tốt nhất <strong>${best}</strong> (${(pivot[best]?.[latest]?.gtc??0).toFixed(1)}%) · AM tệ nhất <strong>${worst}</strong> (${(pivot[worst]?.[latest]?.gtc??0).toFixed(1)}%).`;
  }
+ if(lg&&lg2){
+  const dVol=lg.vol-lg2.vol,dGTC=lg.nGTC-lg2.nGTC;
+  const vS=dVol>=0?'+':'',gS=dGTC>=0?'+':'';
+  const vC=dVol>=0?'var(--red)':'var(--green)',gC=dGTC>=0?'var(--green)':'var(--red)';
+  ana+=` So với ${shortD(prev)}: Vol <span style="color:${vC};font-weight:700">${vS}${fmt(dVol)}</span> · GTC <span style="color:${gC};font-weight:700">${gS}${fmt(dGTC)}</span>.`;
+  let maxDrop=null,maxAM='';
+  names.forEach(name=>{const c1=pivot[name]?.[latest]?.vol??null,c2=pivot[name]?.[prev]?.vol??null;if(c1!==null&&c2!==null){const drop=c2-c1;if(maxDrop===null||drop>maxDrop){maxDrop=drop;maxAM=name;}}});
+  if(maxAM&&maxDrop>0)ana+=` AM giảm Vol nhiều nhất: <strong>${maxAM}</strong> (▼ ${fmt(maxDrop)}).`;
+ }
+ if(ana)h+=`<div class="analysis-box">${ana}</div>`;
+ return h;
+}
+function renderGTCBcTable(rows,dates,last5D){
+ if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+ const data=rows.slice(1).filter(r=>r.length>5&&(r[1]||'').trim());
+ const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
+ const bcRows=data.filter(r=>!isGrand(r));
+ const gRows=data.filter(r=>isGrand(r));
+ const pivot={};
+ bcRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc)return;if(!pivot[bc])pivot[bc]={am,allD:{}};const nGTC=Math.round(parseFloat(r[6])||0);pivot[bc].allD[d]=nGTC;if(dates.includes(d))pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC};});
+ const gPivot={};
+ gRows.forEach(r=>{const d=isoD(r[2]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
+ const activeNames=Object.keys(pivot).filter(bc=>[...last5D].some(d=>(pivot[bc].allD[d]??0)>0));
+ const latest=dates[0];
+ const sortedNames=activeNames.sort((a,b)=>(pivot[b][latest]?.gtc??-1)-(pivot[a][latest]?.gtc??-1));
+ const displayNames=sortedNames.slice(0,30);
+ const cs='padding:5px 8px;';
+ let h=`<div class="table-wrap" style="overflow-x:auto;max-height:1100px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
+  <tr>
+   <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
+   <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
+   <th rowspan="2" style="${cs}min-width:90px;position:sticky;left:170px;z-index:5;background:#FEEDE4">AM</th>
+   ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
+  </tr>
+  <tr>
+   ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
+  </tr>
+ </thead><tbody>`;
+ displayNames.forEach((name,i)=>{
+  const row=pivot[name];
+  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
+  dates.forEach(d=>{const c=row[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
+  h+='</tr>';
+ });
+ if(Object.keys(gPivot).length){
+  h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td colspan="2" style="${cs}position:sticky;left:30px;background:#F8F9FA;z-index:2">Grand Total</td>`;
+  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
+  h+='</tr>';
+ }
+ h+='</tbody></table></div>';
+ const hid=sortedNames.length-displayNames.length;
+ if(hid>0)h+=`<div style="padding:8px 16px;font-size:11px;color:var(--text-sub)">... và ${hid} bưu cục khác (đã ẩn)</div>`;
+ const lg=gPivot[latest];
+ if(lg)h+=`<div class="analysis-box">🏪 <strong>BC ngày ${shortD(latest)}:</strong> Hiển thị ${displayNames.length} BC (${activeNames.length} active trong 5 ngày gần nhất) · Grand Total Vol <strong>${fmt(lg.vol)}</strong> · GTC <strong>${fmt(lg.nGTC)}</strong> đơn (<span style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'};font-weight:700">${lg.gtc.toFixed(1)}%</span>).</div>`;
+ return h;
+}
+function renderGTC(pid){
+ const g=window._GTC[pid];if(!g)return;
+ const {rowsAM,rowsBC}=g;
+ const dataAll=(rowsAM||[]).slice(1).filter(r=>r.length>4&&(r[0]||'').trim());
+ const allD=[...new Set(dataAll.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ const dFrom=document.getElementById(pid+'_dFrom')?.value||allD[allD.length-1]||'';
+ const dTo=document.getElementById(pid+'_dTo')?.value||allD[0]||'';
+ const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
+ const dates=allD.filter(d=>d>=lo&&d<=hi);
+ if(!dates.length){document.getElementById(pid+'_amTable').innerHTML='<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu trong khoảng đã chọn</p>';document.getElementById(pid+'_bcTable').innerHTML='';return;}
+ const last5D=new Set(allD.slice(0,5));
+ document.getElementById(pid+'_amTable').innerHTML=renderGTCAmTable(rowsAM,dates);
+ document.getElementById(pid+'_bcTable').innerHTML=renderGTCBcTable(rowsBC,dates,last5D);
+}
+function buildGTCPage(rowsAM,rowsBC,title,pid){
+ window._GTC[pid]={rowsAM,rowsBC};
+ const dataAM=(rowsAM||[]).slice(1).filter(r=>r.length>4&&(r[0]||'').trim());
+ const allD=[...new Set(dataAM.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ if(!allD.length)return errPage('Không có dữ liệu');
+ const dTo=allD[0],dFrom=allD[Math.min(6,allD.length-1)];
+ const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">${title}</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 15 ngày gần nhất · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span></div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span></div>
  </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM — 15 ngày gần nhất</div><div class="card-info">Sắp xếp: %GTC thấp → cao · Cố định cột tên</div></div>${amTable(rowsAM)}</div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục — 15 ngày gần nhất</div><div class="card-info">Scroll dọc để xem thêm BC</div></div>${bcTable(rowsBC)}</div>`;
+ <div class="date-filter-bar">
+  <label>Từ ngày:</label>
+  <select id="${pid}_dFrom" onchange="renderGTC('${pid}')">${mkOpts(dFrom)}</select>
+  <label>Đến ngày:</label>
+  <select id="${pid}_dTo" onchange="renderGTC('${pid}')">${mkOpts(dTo)}</select>
+ </div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %GTC cao → thấp · Cố định cột tên</div></div><div id="${pid}_amTable"></div></div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Top 30 BC · Grand Total cố định cuối</div></div><div id="${pid}_bcTable"></div></div>`;
 }
 
 /* ===== DASHBOARD 3: FD NGÀY ===== */
 // FD sheets cols: name(0), Ngày(1), %Vol(2), %FD(3), ...
 // BC FD sheets: same (BC name in col 0)
 window._FD={};
+const DC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
 function buildFDDayPage(fd){
- // fd = {totalAM,smeAM,ttsAM,shopeeAM,totalBC,smeBC,ttsBC,shopeeBC}
  if(!fd.totalAM||fd.totalAM.length<2)return errPage('Không có dữ liệu FD');
- // Get available dates from totalAM
  const allD=[...new Set(fd.totalAM.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
- const latest=allD[0]||'';
- const selId='fdDayDateSel';
- const opts=allD.map(d=>`<option value="${d}"${d===latest?' selected':''}>${shortD(d)}</option>`).join('');
+ if(!allD.length)return errPage('Không có dữ liệu FD');
+ const dTo=allD[0],dFrom=allD[Math.min(1,allD.length-1)];
+ const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">Tổng quan Tỉ Lệ Trả - Ngày</div>
   <div class="page-meta"><span class="tag tag-orange">📅 Tỉ lệ hoàn trả theo ngày · Nguồn: Google Sheet</span><span>Bôi đỏ: %FD ≥ 15%</span></div>
  </div>
- <div class="card">
-  <div class="card-header"><div class="card-title"><div class="card-icon">📅</div>Chọn ngày:</div>
-   <select id="${selId}" onchange="renderFDDay(this.value)" style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit">${opts}</select>
-  </div>
-  <div id="fdDayAMTable"></div>
+ <div class="date-filter-bar">
+  <label>Từ ngày:</label>
+  <select id="fdDay_dFrom" onchange="renderFDDay()">${mkOpts(dFrom)}</select>
+  <label>Đến ngày:</label>
+  <select id="fdDay_dTo" onchange="renderFDDay()">${mkOpts(dTo)}</select>
  </div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>A. Theo AM</div></div><div id="fdDayAMTable"></div></div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdDayBCTable"></div></div>`;
 }
-
-function renderFDDay(dateISO){
- const fd=window._FD;
- if(!fd.totalAM)return;
- // Build AM table
- document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable(
-  [fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],
-  ['FD Total','FD SME','FD TTS','FD Shopee'],
-  dateISO,0,'AM'
- );
- // Build BC table
- document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable(
-  [fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],
-  ['FD Total','FD SME','FD TTS','FD Shopee'],
-  dateISO,0,'Bưu Cục',true
- );
+function renderFDDay(){
+ const fd=window._FD;if(!fd.totalAM)return;
+ const allD=[...new Set(fd.totalAM.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ const dFrom=document.getElementById('fdDay_dFrom')?.value||allD[1]||allD[0];
+ const dTo=document.getElementById('fdDay_dTo')?.value||allD[0];
+ const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
+ const dates=allD.filter(d=>d>=lo&&d<=hi);
+ document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM');
+ document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục');
 }
-
-function buildFDDayTable(sheetArr,labels,dateISO,nameCol,nameLabel,hideVol=false){
- // Extract rows matching dateISO for each sheet
- function getRows(rows){
+function buildFDDayTable(sheetArr,labels,dates,nameLabel){
+ if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
+ function getDataD(rows,dISO){
   if(!rows||rows.length<2)return{};
   const res={};
-  rows.slice(1).forEach(r=>{
-   if(isoD(r[1])!==dateISO)return;
-   const name=(r[0]||'').trim();
-   if(!name)return;
-   res[name]={vol:parsePct(r[2]),fd:parsePct(r[3])};
-  });
+  rows.slice(1).forEach(r=>{if(isoD(r[1])!==dISO)return;const name=(r[0]||'').trim();if(!name)return;res[name]={vol:parsePct(r[2]),fd:parsePct(r[3])};});
   return res;
  }
- const data=sheetArr.map(getRows);
- // Union of all names, sort by Total %FD desc (data[0])
+ const dData=dates.map(d=>sheetArr.map(s=>getDataD(s,d)));
  const allNames=new Set();
- data.forEach(d=>Object.keys(d).forEach(n=>allNames.add(n)));
+ dData.forEach(dd=>dd.forEach(d=>Object.keys(d).forEach(n=>allNames.add(n))));
  const isGrand=n=>n.toLowerCase().includes('grand total');
  const regular=[...allNames].filter(n=>!isGrand(n));
  const grands=[...allNames].filter(n=>isGrand(n));
- const sorted=regular.sort((a,b)=>(data[0][b]?.fd??-1)-(data[0][a]?.fd??-1));
+ const sorted=regular.sort((a,b)=>(dData[0]?.[0]?.[b]?.fd??-1)-(dData[0]?.[0]?.[a]?.fd??-1));
  const names=[...sorted,...grands];
- if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu cho ngày ${shortD(dateISO)}</p>`;
- const cs='padding:7px 10px;';
- let h=`<div class="table-wrap"><table style="font-size:12px"><thead><tr>
-  <th style="${cs}width:32px;text-align:center">STT</th>
-  <th style="${cs}min-width:130px">${nameLabel}</th>
-  ${labels.map(l=>hideVol?`<th style="${cs}text-align:center">${l}</th>`:`<th style="${cs}text-align:center">%Vol<br><small>${l}</small></th><th style="${cs}text-align:center">%FD<br><small>${l}</small></th>`).join('')}
- </tr></thead><tbody>`;
+ if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
+ const cs='padding:6px 8px;';
+ const isBC=nameLabel==='Bưu Cục';
+ let h=`<div class="table-wrap" style="overflow-x:auto${isBC?';max-height:1100px':''}"><table style="font-size:12px"><thead${isBC?' style="position:sticky;top:0;z-index:4"':''}>`;
+ h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:130px">${nameLabel}</th>`;
+ dates.forEach((d,di)=>{const bg=DC[di%DC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>${shortDDow(d)}</strong></th>`;});
+ h+='</tr><tr>';
+ dates.forEach((d,di)=>{const bg=DC[di%DC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
+ h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
-  const rCls=isG?'class="tot"':'';
-  h+=`<tr ${rCls}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap">${name}</td>`;
-  data.forEach(d=>{
-   const cell=d[name];
-   const fd=cell?.fd??null;
-   const vol=cell?.vol??null;
-   const redFD=fd!==null&&fd>=15;
-   if(hideVol){
-    h+=`<td style="${cs}text-align:center${redFD?';background:#FEE2E2;color:#DC2626;font-weight:700':''}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
-   } else {
-    h+=`<td style="${cs}text-align:center">${vol!==null?vol.toFixed(2)+'%':'—'}</td>`;
-    h+=`<td style="${cs}text-align:center${redFD?';background:#FEE2E2;color:#DC2626;font-weight:700':''}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
-   }
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap;position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2">${name}</td>`;
+  dates.forEach((d,di)=>{
+   const bg=DC[di%DC.length];
+   labels.forEach((_,si)=>{
+    const cell=dData[di]?.[si]?.[name];const fd=cell?.fd??null;const red=fd!==null&&fd>=15;
+    h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
+   });
   });
   h+='</tr>';
  });
  h+='</tbody></table></div>';
- // Analysis
- const gData=data[0];
- const grandKey=grands[0];
- const totalFD=grandKey?gData[grandKey]?.fd:null;
- const worstAM=sorted[0];const bestAM=sorted[sorted.length-1];
- if(worstAM){
-  h+=`<div class="analysis-box">📊 <strong>Ngày ${shortD(dateISO)}:</strong>${totalFD!==null?` Tổng %FD Total: <strong style="color:${totalFD>=15?'var(--red)':'var(--green)'}"> ${totalFD.toFixed(2)}%</strong>.`:''} ${nameLabel} cao nhất: <strong>${worstAM}</strong> (${(data[0][worstAM]?.fd??0).toFixed(2)}%) · Thấp nhất: <strong>${bestAM}</strong> (${(data[0][bestAM]?.fd??0).toFixed(2)}%).</div>`;
+ if(dates.length>=2){
+  const grandKey=grands[0];
+  if(grandKey){
+   const grpLabels=[{l:'Total',si:0},{l:'SME',si:1},{l:'TTS',si:2},{l:'Shopee',si:3}];
+   h+=`<div class="analysis-box">📊 <strong>So sánh ${shortD(dates[1])} → ${shortD(dates[0])}:</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">`;
+   grpLabels.forEach(g=>{
+    const fd0=dData[0]?.[g.si]?.[grandKey]?.fd??null;
+    const fd1=dData[1]?.[g.si]?.[grandKey]?.fd??null;
+    if(fd0!==null&&fd1!==null){
+     const diff=fd0-fd1;const isUp=diff>0;
+     const color=isUp?'var(--red)':'var(--green)';const arrow=isUp?'▲':'▼';
+     h+=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:110px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text-sub);margin-bottom:4px">${g.l}</div><div style="font-size:14px;font-weight:700;color:${color}">${arrow} ${Math.abs(diff).toFixed(2)}%</div><div style="font-size:10px;color:var(--text-sub)">${fd1.toFixed(2)}% → ${fd0.toFixed(2)}%</div></div>`;
+    }
+   });
+   h+=`</div></div>`;
+  }
  }
  return h;
 }
@@ -450,65 +479,90 @@ function parseWeeklySection(rows,headerLabel){
  }
  return{weeks,data};
 }
-
-function buildFDWeekPage(fd){
- function buildWeekTable(sheetArr,labels,isBC=false){
-  const nameLabel=isBC?'Bưu Cục':'AM';
-  const hLabel=isBC?'Bưu Cục':'AM';
-  const parsed=sheetArr.map(s=>parseWeeklySection(s,hLabel));
-  const firstValid=parsed.find(p=>p&&p.weeks.length>0);
-  if(!firstValid)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu tuần</p>';
-  const weeks=firstValid.weeks;
-  // Get all names
-  const allNames=new Set();
-  parsed.forEach(p=>{if(p)p.data.forEach(r=>allNames.add(r.name));});
-  const isGrand=n=>n.toLowerCase().includes('grand total');
-  const regular=[...allNames].filter(n=>!isGrand(n));
-  const grands=[...allNames].filter(n=>isGrand(n));
-  // Sort by latest week %FD of Total (parsed[0]) desc
-  const latestWk=weeks[weeks.length-1];
-  const p0Map={};if(parsed[0])parsed[0].data.forEach(r=>{p0Map[r.name]=r.wData;});
-  const sorted=regular.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
-  const names=[...sorted,...grands];
-  const cs='padding:6px 9px;';
-  let h=`<div class="table-wrap" style="${isBC?'max-height:1100px;overflow-y:auto;':''} overflow-x:auto"><table style="font-size:12px"><thead${isBC?' style="position:sticky;top:0;z-index:4;background:#FEEDE4"':''}>
-   <tr>
-    <th rowspan="2" style="${cs}width:32px;text-align:center;${isBC?'position:sticky;top:0;z-index:5;background:#FEEDE4':''}">STT</th>
-    <th rowspan="2" style="${cs}min-width:130px;${isBC?'position:sticky;top:0;z-index:5;background:#FEEDE4':''}">${nameLabel}</th>
-    ${labels.map(l=>`<th colspan="${weeks.length}" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${l}</th>`).join('')}
-   </tr>
-   <tr>
-    ${labels.map(()=>weeks.map(w=>`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB">T${w}</th>`).join('')).join('')}
-   </tr>
-  </thead><tbody>`;
-  const wMap={};parsed.forEach((p,si)=>{wMap[si]={};if(p)p.data.forEach(r=>{wMap[si][r.name]=r.wData;});});
-  names.forEach((name,i)=>{
-   const isG=isGrand(name);
-   h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap">${name}</td>`;
+const WC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
+function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
+ const hLabel=isBC?'Bưu Cục':'AM';
+ const parsed=sheetArr.map(s=>parseWeeklySection(s,hLabel));
+ const wMap={};parsed.forEach((p,si)=>{wMap[si]={};if(p)p.data.forEach(r=>{wMap[si][r.name]=r.wData;});});
+ const allNames=new Set();
+ parsed.forEach(p=>{if(p)p.data.forEach(r=>allNames.add(r.name));});
+ const isGrand=n=>n.toLowerCase().includes('grand total');
+ const regular=[...allNames].filter(n=>!isGrand(n));
+ const grands=[...allNames].filter(n=>isGrand(n));
+ const p0Map=wMap[0]||{};
+ // Remove rows where all selected weeks have 0% FD (quit employees)
+ const active=regular.filter(name=>selWeeks.some(w=>(p0Map[name]?.[w]??0)>0));
+ const latestWk=selWeeks[selWeeks.length-1];
+ const sorted=active.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
+ const names=[...sorted,...grands];
+ const cs='padding:6px 9px;';
+ let h=`<div class="table-wrap" style="${isBC?'max-height:1100px;overflow-y:auto;':''}overflow-x:auto"><table style="font-size:12px"><thead${isBC?' style="position:sticky;top:0;z-index:4"':''}>`;
+ h+=`<tr><th rowspan="2" style="${cs}width:32px;text-align:center;background:#FEEDE4">STT</th><th rowspan="2" style="${cs}min-width:130px;background:#FEEDE4">${hLabel}</th>`;
+ selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>Tuần ${w}</strong></th>`;});
+ h+='</tr><tr>';
+ selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
+ h+='</tr></thead><tbody>';
+ names.forEach((name,i)=>{
+  const isG=isGrand(name);
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap">${name}</td>`;
+  selWeeks.forEach((w,wi)=>{
+   const bg=WC[wi%WC.length];
    labels.forEach((_,si)=>{
-    weeks.forEach(w=>{
-     const fd=wMap[si]?.[name]?.[w]??null;
-     const red=fd!==null&&fd>=15;
-     h+=`<td style="${cs}text-align:center;border-left:1px solid #F3F4F6${red?';background:#FEE2E2;color:#DC2626;font-weight:700':''}">${fd!==null?fd.toFixed(1)+'%':'—'}</td>`;
-    });
+    const fd=wMap[si]?.[name]?.[w]??null;const red=fd!==null&&fd>=15;
+    h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(1)+'%':'—'}</td>`;
    });
-   h+='</tr>';
   });
-  h+='</tbody></table></div>';
-  // Analysis
-  const grandKey=grands[0];
-  const latestTotal=grandKey?(p0Map[grandKey]?.[latestWk]??null):null;
-  if(sorted.length>0){
-   h+=`<div class="analysis-box">📆 <strong>Tuần ${latestWk}:</strong>${latestTotal!==null?` Tổng %FD Total: <strong style="color:${latestTotal>=15?'var(--red)':'var(--green)'}"> ${latestTotal.toFixed(1)}%</strong>.`:''} ${nameLabel} FD cao nhất: <strong>${sorted[0]}</strong> (${(p0Map[sorted[0]]?.[latestWk]??0).toFixed(1)}%) · Thấp nhất: <strong>${sorted[sorted.length-1]}</strong> (${(p0Map[sorted[sorted.length-1]]?.[latestWk]??0).toFixed(1)}%).</div>`;
+  h+='</tr>';
+ });
+ h+='</tbody></table></div>';
+ if(selWeeks.length===2){
+  const w1=selWeeks[0],w2=selWeeks[1];const grandKey=grands[0];
+  if(grandKey){
+   h+=`<div class="analysis-box">📆 <strong>So sánh Tuần ${w1} → Tuần ${w2}:</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">`;
+   labels.forEach((l,si)=>{
+    const fd1=wMap[si]?.[grandKey]?.[w1]??null;const fd2=wMap[si]?.[grandKey]?.[w2]??null;
+    if(fd1!==null&&fd2!==null){
+     const diff=fd2-fd1;const isUp=diff>0;
+     const color=isUp?'var(--red)':'var(--green)';const arrow=isUp?'▲':'▼';
+     h+=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:110px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text-sub);margin-bottom:4px">${l}</div><div style="font-size:14px;font-weight:700;color:${color}">${arrow} ${Math.abs(diff).toFixed(1)}%</div><div style="font-size:10px;color:var(--text-sub)">T${w1}: ${fd1.toFixed(1)}% → T${w2}: ${fd2.toFixed(1)}%</div></div>`;
+    }
+   });
+   h+=`</div></div>`;
   }
-  return h;
  }
+ return h;
+}
+function renderFDWeek(){
+ const fd=window._FD;if(!fd||!fd.totalAM)return;
+ const amP=parseWeeklySection(fd.totalAM,'AM');
+ if(!amP)return;
+ const weeks=amP.weeks;
+ const wFrom=document.getElementById('fdWk_from')?.value||weeks[0];
+ const wTo=document.getElementById('fdWk_to')?.value||weeks[weeks.length-1];
+ const fi=weeks.indexOf(wFrom),ti=weeks.indexOf(wTo);
+ const lo=Math.min(fi,ti),hi=Math.max(fi,ti);
+ const selWeeks=weeks.slice(lo,hi+1);
+ document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],false,selWeeks);
+ document.getElementById('fdWkBCTable').innerHTML=buildFDWeekTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],true,selWeeks);
+}
+function buildFDWeekPage(fd){
+ const amP=parseWeeklySection(fd.totalAM,'AM');
+ if(!amP||!amP.weeks.length)return errPage('Không có dữ liệu tuần FD');
+ const weeks=amP.weeks;
+ const wTo=weeks[weeks.length-1],wFrom=weeks[Math.max(0,weeks.length-2)];
+ const mkWk=sv=>weeks.map(w=>`<option value="${w}"${w===sv?' selected':''}>Tuần ${w}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">Tổng quan Tỉ Lệ Trả - Tuần</div>
   <div class="page-meta"><span class="tag tag-orange">📆 Tỉ lệ hoàn trả theo tuần · Nguồn: Google Sheet</span><span>Bôi đỏ: %FD ≥ 15%</span></div>
  </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div></div>${buildWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['FD Total','FD SME','FD TTS','FD Shopee'],false)}</div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div>${buildWeekTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['FD Total','FD SME','FD TTS','FD Shopee'],true)}</div>`;
+ <div class="date-filter-bar">
+  <label>Từ tuần:</label>
+  <select id="fdWk_from" onchange="renderFDWeek()">${mkWk(wFrom)}</select>
+  <label>Đến tuần:</label>
+  <select id="fdWk_to" onchange="renderFDWeek()">${mkWk(wTo)}</select>
+ </div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div></div><div id="fdWkAMTable"></div></div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdWkBCTable"></div></div>`;
 }
 
 /* ===== DASHBOARD 5 & 6: ODR / OPR ===== */
@@ -799,14 +853,16 @@ async function init(){
  };
  // p1 — GTC Total
  const p1el=document.getElementById('p1');
- if(R['GTC Total theo AM']&&R['GTC Total theo Bưu Cục'])
-  p1el.innerHTML=buildGTCPage(R['GTC Total theo AM'],R['GTC Total theo Bưu Cục'],'Tổng quan GTC Total');
- else p1el.innerHTML=errPage('Không thể tải GTC Total. Kiểm tra sheet "GTC Total theo AM" / "GTC Total theo Bưu Cục".');
+ if(R['GTC Total theo AM']&&R['GTC Total theo Bưu Cục']){
+  p1el.innerHTML=buildGTCPage(R['GTC Total theo AM'],R['GTC Total theo Bưu Cục'],'Tổng quan GTC Total','p1');
+  setTimeout(()=>renderGTC('p1'),0);
+ }else p1el.innerHTML=errPage('Không thể tải GTC Total. Kiểm tra sheet "GTC Total theo AM" / "GTC Total theo Bưu Cục".');
  // p2 — GTC TTS
  const p2el=document.getElementById('p2');
- if(R['GTC TTS theo AM']&&R['GTC TTS theo Bưu Cục'])
-  p2el.innerHTML=buildGTCPage(R['GTC TTS theo AM'],R['GTC TTS theo Bưu Cục'],'Tổng quan GTC TTS');
- else p2el.innerHTML=errPage('Không thể tải GTC TTS. Kiểm tra sheet "GTC TTS theo AM" / "GTC TTS theo Bưu Cục".');
+ if(R['GTC TTS theo AM']&&R['GTC TTS theo Bưu Cục']){
+  p2el.innerHTML=buildGTCPage(R['GTC TTS theo AM'],R['GTC TTS theo Bưu Cục'],'Tổng quan GTC TTS','p2');
+  setTimeout(()=>renderGTC('p2'),0);
+ }else p2el.innerHTML=errPage('Không thể tải GTC TTS. Kiểm tra sheet "GTC TTS theo AM" / "GTC TTS theo Bưu Cục".');
  // p3 — FD Ngày
  window._FD={
   totalAM:R['FD Total theo AM'],smeAM:R['FD SME theo AM'],
@@ -817,13 +873,11 @@ async function init(){
  const p3el=document.getElementById('p3');
  if(R['FD Total theo AM']){
   p3el.innerHTML=buildFDDayPage(window._FD);
-  // Auto-render with latest date
-  const allD=[...new Set(R['FD Total theo AM'].slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  if(allD[0])renderFDDay(allD[0]);
+  setTimeout(()=>renderFDDay(),0);
  }else p3el.innerHTML=errPage('Không thể tải dữ liệu FD.');
  // p4 — FD Tuần
  const p4el=document.getElementById('p4');
- if(R['FD Total theo AM'])p4el.innerHTML=buildFDWeekPage(window._FD);
+ if(R['FD Total theo AM']){p4el.innerHTML=buildFDWeekPage(window._FD);setTimeout(()=>renderFDWeek(),0);}
  else p4el.innerHTML=errPage('Không thể tải dữ liệu FD Tuần.');
  // p5 — ODR
  const p5el=document.getElementById('p5');
