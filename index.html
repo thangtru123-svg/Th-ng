@@ -296,9 +296,9 @@ function renderGTCBcTable(rows,dates,last5D){
  gRows.forEach(r=>{const d=isoD(r[2]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
  const activeNames=Object.keys(pivot).filter(bc=>[...last5D].some(d=>(pivot[bc].allD[d]??0)>0));
  const latest=dates[0];
- const displayNames=activeNames.sort((a,b)=>(pivot[b][latest]?.gtc??-1)-(pivot[a][latest]?.gtc??-1));
+ const displayNames=activeNames.sort((a,b)=>(pivot[a][latest]?.gtc??999)-(pivot[b][latest]?.gtc??999));
  const cs='padding:5px 8px;';
- let h=`<div class="table-wrap" style="overflow-x:auto;max-height:840px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
+ let h=`<div class="table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:840px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
   <tr>
    <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
    <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
