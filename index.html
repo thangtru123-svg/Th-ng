@@ -1232,7 +1232,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
    const am=(r[0]||'').trim();
    const isGrand=!am;
    const key=isGrand?'__grand__':am;
-   ltc[key]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,nLTC:Math.round(parseFloat(r[4])||0)};
+   ltc[key]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,pctLTC:(parseFloat(r[4])||0)*100};
   });
   return ltc;
  }
@@ -1299,7 +1299,6 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  amNames.forEach((am,i)=>{
   const ca1=pivot[am]?.['Hàng Mới Ca 1'];const ca2=pivot[am]?.['Hàng Mới Ca 2'];const ton=pivot[am]?.['Hàng Tồn'];
   const tong=computeTong(pivot,am);const ltc=ltcMap[am];
-  const ltcPct=ltc&&ltc.vol>0?ltc.nLTC/ltc.vol*100:null;
   tbl1+=`<tr>
    <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
    <td style="${cs}font-weight:700;position:sticky;left:29px;background:#fff;z-index:2"><span style="white-space:nowrap">${am}</span></td>`;
@@ -1307,19 +1306,18 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
   tbl1+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
   tbl1+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
   tbl1+=tong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(tong.vol)}</td><td style="${cs3}">${tong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(tong.gtc)}">${tong.gtc.toFixed(1)}%</span></td><td style="${cs2}color:var(--green);font-weight:600">${fmt(tong.nGTC)}</td>`:`<td colspan="4" style="${cs3}border-left:3px solid #FDBA74;color:var(--text-sub)">—</td>`;
-  tbl1+=ltc&&ltc.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(ltc.vol)}</td><td style="${cs3}">${ltc.gan.toFixed(1)}%</td><td style="${cs3}">${ltcPct!==null?ltcPct.toFixed(1)+'%':'—'}</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4;color:var(--text-sub)">—</td>`;
+  tbl1+=ltc&&ltc.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(ltc.vol)}</td><td style="${cs3}">${ltc.gan.toFixed(1)}%</td><td style="${cs3}">${ltc.pctLTC.toFixed(1)}%</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4;color:var(--text-sub)">—</td>`;
   tbl1+='</tr>';
  });
  // Grand Total row
  const gCa1=grandByLoai['Hàng Mới Ca 1'],gCa2=grandByLoai['Hàng Mới Ca 2'],gTon=grandByLoai['Hàng Tồn'];
  const gTong=computeGrandTong(grandByLoai);const gLTC=ltcMap['__grand__'];
- const gLTCPct=gLTC&&gLTC.vol>0?gLTC.nLTC/gLTC.vol*100:null;
  tbl1+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:700;position:sticky;left:29px;background:#F8F9FA;z-index:2">Grand Total</td>`;
  tbl1+=gCa1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(gCa1.vol)}</td><td style="${cs3}">${gCa1.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BFDBFE">—</td>`;
  tbl1+=gCa2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(gCa2.vol)}</td><td style="${cs3}">${gCa2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0">—</td>`;
  tbl1+=gTon?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(gTon.vol)}</td><td style="${cs3}">${gTon.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA">—</td>`;
  tbl1+=gTong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(gTong.vol)}</td><td style="${cs3}">${gTong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gTong.gtc)}">${gTong.gtc.toFixed(1)}%</span></td><td style="${cs2}color:var(--green);font-weight:700">${fmt(gTong.nGTC)}</td>`:`<td colspan="4" style="${cs3}border-left:3px solid #FDBA74">—</td>`;
- tbl1+=gLTC&&gLTC.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(gLTC.vol)}</td><td style="${cs3}">${gLTC.gan.toFixed(1)}%</td><td style="${cs3}">${gLTCPct!==null?gLTCPct.toFixed(1)+'%':'—'}</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4">—</td>`;
+ tbl1+=gLTC&&gLTC.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(gLTC.vol)}</td><td style="${cs3}">${gLTC.gan.toFixed(1)}%</td><td style="${cs3}">${gLTC.pctLTC.toFixed(1)}%</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4">—</td>`;
  tbl1+='</tr></tbody></table></div>';
  // Analysis
  let ana1='';
