@@ -457,19 +457,27 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
  });
  h+='</tr>';
  h+='</tbody></table></div>';
- if(dates.length>=2){
-  const grandKey=grands[0];
-  if(grandKey){
-   const grpLabels=[{l:'Total',si:0},{l:'SME',si:1},{l:'TTS',si:2},{l:'Shopee',si:3}];
-   h+=`<div class="analysis-box">📊 <strong>So sánh ${shortD(dates[1])} → ${shortD(dates[0])}:</strong><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">`;
-   grpLabels.forEach(g=>{
-    const fd0=dData[0]?.[g.si]?.[grandKey]?.fd??null;
-    const fd1=dData[1]?.[g.si]?.[grandKey]?.fd??null;
-    if(fd0!==null&&fd1!==null){
-     const diff=fd0-fd1;const isUp=diff>0;
-     const color=isUp?'var(--red)':'var(--green)';const arrow=isUp?'▲':'▼';
-     h+=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:110px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text-sub);margin-bottom:4px">${g.l}</div><div style="font-size:14px;font-weight:700;color:${color}">${arrow} ${Math.abs(diff).toFixed(2)}%</div><div style="font-size:10px;color:var(--text-sub)">${fd1.toFixed(2)}% → ${fd0.toFixed(2)}%</div></div>`;
-    }
+ if(dates.length>=2&&nameLabel==='AM'){
+  // Tính GT weighted average cho từng (di, si)
+  const computeGT=(di,si)=>{const dd=dData[di]?.[si]||{};const vs=Object.entries(dd).filter(([n])=>!isGrand(n)).map(([,v])=>v);const sv=vs.reduce((s,v)=>s+(v.vol||0),0);const sf=vs.reduce((s,v)=>s+(v.fd||0)*(v.vol||0),0);return sv>0?sf/sv:null;};
+  // AM tệ nhất: fd cao nhất
+  const worstAM=(di,si)=>{const dd=dData[di]?.[si]||{};let wn=null,wf=-1;Object.entries(dd).filter(([n])=>!isGrand(n)).forEach(([n,v])=>{if(v.fd!=null&&v.fd>wf){wf=v.fd;wn=n;}});return wn?{name:wn,fd:wf}:null;};
+  // AM cải thiện nhiều nhất: giảm nhiều nhất từ ngày 1→0
+  const bestAM=(si)=>{const dd0=dData[0]?.[si]||{},dd1=dData[1]?.[si]||{};let bn=null,bd=0;Object.entries(dd0).filter(([n])=>!isGrand(n)).forEach(([n,v])=>{if(dd1[n]&&v.fd!=null&&dd1[n].fd!=null){const imp=dd1[n].fd-v.fd;if(imp>bd){bd=imp;bn=n;}}});return bn?{name:bn,improved:bd}:null;};
+  const grpLabels=[{l:'Total',si:0},{l:'SME',si:1},{l:'TTS',si:2},{l:'Shopee',si:3}];
+  const boxes=grpLabels.map(g=>{const gt0=computeGT(0,g.si),gt1=computeGT(1,g.si);const w=worstAM(0,g.si);const b=bestAM(g.si);return{l:g.l,gt0,gt1,w,b};}).filter(b=>b.gt0!==null&&b.gt1!==null);
+  if(boxes.length){
+   h+=`<div class="analysis-box"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 So sánh ${shortD(dates[1])} → ${shortD(dates[0])}</div><div style="display:flex;flex-wrap:wrap;gap:10px">`;
+   boxes.forEach(b=>{
+    const diff=b.gt0-b.gt1;const isUp=diff>0;
+    const color=isUp?'var(--red)':'var(--green)';const arrow=isUp?'▲':'▼';
+    h+=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px 14px;min-width:148px">`;
+    h+=`<div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">${b.l}</div>`;
+    h+=`<div style="font-size:16px;font-weight:800;color:${color}">${arrow} ${Math.abs(diff).toFixed(2)}%</div>`;
+    h+=`<div style="font-size:11px;color:var(--text-sub);margin-top:2px">${b.gt1.toFixed(2)}% → <strong>${b.gt0.toFixed(2)}%</strong></div>`;
+    if(b.w)h+=`<div style="font-size:10px;margin-top:6px;padding-top:6px;border-top:1px solid #E5E7EB;color:#DC2626">⚠️ Tệ nhất: <strong>${b.w.name}</strong> (${b.w.fd.toFixed(2)}%)</div>`;
+    if(b.b&&b.b.improved>0.5)h+=`<div style="font-size:10px;margin-top:4px;color:#16A34A">✅ Cải thiện: <strong>${b.b.name}</strong> (↓${b.b.improved.toFixed(2)}%)</div>`;
+    h+=`</div>`;
    });
    h+=`</div></div>`;
   }
@@ -698,6 +706,47 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>`;
 }
 
+/* ===== DASHBOARD 0: CHART FD NGÀY ===== */
+function renderChartFD(dates,byDate){
+ destroyChart('fd');
+ const canvas=document.getElementById('chartFD');if(!canvas||!dates.length)return;
+ const labels=dates.map(d=>shortD(d));
+ const vals=dates.map(d=>byDate[d]!=null?+byDate[d].toFixed(2):null);
+ const ptColors=vals.map(v=>v===null?'#9CA3AF':v>=15?'#DC2626':v>=10?'#D97706':'#16A34A');
+ window._charts['fd']=new Chart(canvas,{
+  type:'line',
+  data:{labels,datasets:[{
+   label:'%FD Total AM',data:vals,
+   borderColor:'#F15D29',backgroundColor:'rgba(241,93,41,0.08)',
+   tension:0.4,pointRadius:5,pointHoverRadius:7,borderWidth:2.5,
+   pointBackgroundColor:ptColors,pointBorderColor:'#fff',pointBorderWidth:1.5,fill:true
+  }]},
+  options:{responsive:true,interaction:{mode:'index',intersect:false},
+   plugins:{legend:{position:'top',labels:{font:{size:12},padding:16}},
+    tooltip:{callbacks:{label:ctx=>`%FD Total AM: ${ctx.raw}%`}}
+   },
+   scales:{
+    y:{min:0,suggestedMax:25,title:{display:true,text:'%FD'},grid:{color:'#F3F4F6'},ticks:{font:{size:11},callback:v=>v+'%'}},
+    x:{grid:{color:'#F3F4F6'},ticks:{font:{size:11},maxRotation:45}}
+   }
+  }
+ });
+ const anaEl=document.getElementById('anaFD');if(!anaEl||!dates.length)return;
+ const latest=dates[dates.length-1],prev=dates[dates.length-2];
+ const lv=byDate[latest],pv=prev!=null?byDate[prev]:null;
+ const trend5=()=>{
+  const recent=dates.slice(-5).map(d=>byDate[d]).filter(v=>v!=null);
+  if(recent.length<3)return null;
+  const lo=(recent[0]+recent[1])/2,hi=(recent[recent.length-2]+recent[recent.length-1])/2;
+  return hi-lo;
+ };
+ const t=trend5();
+ let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> %FD = <strong style="color:${lv>=15?'var(--red)':lv>=10?'var(--yellow)':'var(--green)'}">${lv?.toFixed(2)}%</strong>.`;
+ if(pv!=null){const diff=+(lv-pv).toFixed(2);ana+=` So với ${shortD(prev)}: <span style="color:${diff>0?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'▲ +':'▼ '}${diff}%</span>.`;}
+ if(t!=null){const tc=t>0?'var(--red)':'var(--green)';ana+=` Xu hướng 5 ngày gần nhất: <span style="color:${tc};font-weight:600">${t>0?'▲ Tăng':'▼ Giảm'} (${t>0?'+':''}${t.toFixed(2)}%)</span>.`;}
+ anaEl.innerHTML=ana;
+}
+
 /* ===== DASHBOARD 0: TỔNG QUAN ===== */
 window._charts={};
 window._agingRows=null;
@@ -810,6 +859,18 @@ function buildOverviewPage(){
  const gtcByDate={};
  gtcRows.forEach(r=>{const d=isoD(r[1]);if(d)gtcByDate[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100};});
  const gtcDates=Object.keys(gtcByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
+ // FD Grand Total theo ngày (weighted avg vol×fd từ totalAM)
+ const _fdByDate={};
+ (window._FD?.totalAM||[]).slice(1).forEach(r=>{
+  const d=isoD(r[1]);if(!d)return;
+  const vol=parsePct(r[2]);const fd=parsePct(r[3]);
+  if(vol>0&&!(r[0]||'').toLowerCase().includes('grand total')){
+   if(!_fdByDate[d])_fdByDate[d]={sv:0,sf:0};
+   _fdByDate[d].sv+=vol;_fdByDate[d].sf+=fd*vol;
+  }
+ });
+ const fdGTByDate={};Object.keys(_fdByDate).forEach(d=>{const x=_fdByDate[d];if(x.sv>0)fdGTByDate[d]=x.sf/x.sv;});
+ const fdDates=Object.keys(fdGTByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
  // Ontime aggregate
  function getOntimeGT(rows){const bd={};(rows||[]).slice(1).forEach(r=>{if((r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim()||r.length<5)return;const d=isoD(r[1]);if(!d)return;if(!bd[d])bd[d]={vol:0,cnt:0};bd[d].vol+=Math.round(parseFloat(r[2])||0);bd[d].cnt+=Math.round(parseFloat(r[4])||0);});return bd;}
  window._ovOdrByDate=getOntimeGT(window._D.odrAM);
@@ -834,6 +895,11 @@ function buildOverviewPage(){
   <div id="anaGTC" class="analysis-box" style="margin:0 16px 16px"></div>
  </div>
  <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🔄</div>Tỉ Lệ Trả AM Theo Ngày – 15 Ngày Gần Nhất</div><div class="card-info">Grand Total · %FD Weighted Avg</div></div>
+  <div style="padding:16px 20px"><canvas id="chartFD" style="max-height:280px"></canvas></div>
+  <div id="anaFD" class="analysis-box" style="margin:0 16px 16px"></div>
+ </div>
+ <div class="card">
   <div class="card-header"><div class="card-title"><div class="card-icon">⏳</div>Aging &gt; 5 Ngày – Xu Hướng</div><div class="card-info">Tổng · BC Ổn định · BC Bất ổn</div></div>
   <div class="date-filter-bar">
    <label>Từ ngày:</label><select id="ovAging_dFrom" onchange="renderChartAging()">${mkAO(agFrom)}</select>
@@ -847,7 +913,7 @@ function buildOverviewPage(){
   <div style="padding:16px 20px"><canvas id="chartOntime" style="max-height:300px"></canvas></div>
   <div id="anaOntime" class="analysis-box" style="margin:0 16px 16px"></div>
  </div>`;
- setTimeout(()=>{renderChartGTC(gtcDates,gtcByDate);renderChartAging();renderChartOntime();},50);
+ setTimeout(()=>{renderChartGTC(gtcDates,gtcByDate);renderChartFD(fdDates,fdGTByDate);renderChartAging();renderChartOntime();},50);
 }
 
 /* ===== SPLASH ===== */
