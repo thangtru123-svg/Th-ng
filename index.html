@@ -245,7 +245,7 @@ function renderGTCAmTable(rows,dates){
  const gPivot={};
  gRows.forEach(r=>{const d=isoD(r[1]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
  const latest=dates[0];
- const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]?.gtc??-1)-(pivot[a][latest]?.gtc??-1));
+ const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.gtc??999)-(pivot[b][latest]?.gtc??999));
  const cs='padding:6px 9px;';
  const sH='position:sticky;left:0;z-index:3;background:#FEEDE4;';
  const sH2='position:sticky;left:32px;z-index:3;background:#FEEDE4;';
@@ -273,17 +273,18 @@ function renderGTCAmTable(rows,dates){
  const lg=gPivot[latest];const prev=dates[1];const lg2=prev?gPivot[prev]:null;
  let ana='';
  if(names.length>0){
-  const best=names[0],worst=names[names.length-1];
-  ana+=`📊 Ngày ${shortD(latest)}: AM tốt nhất <strong>${best}</strong> (${(pivot[best]?.[latest]?.gtc??0).toFixed(1)}%) · AM tệ nhất <strong>${worst}</strong> (${(pivot[worst]?.[latest]?.gtc??0).toFixed(1)}%).`;
+  const worst=names[0],best=names[names.length-1];
+  ana+=`📊 Ngày ${shortD(latest)}:<br>AM tốt nhất <strong>${best}</strong> (${(pivot[best]?.[latest]?.gtc??0).toFixed(1)}%)<br>AM tệ nhất <strong>${worst}</strong> (${(pivot[worst]?.[latest]?.gtc??0).toFixed(1)}%)`;
  }
  if(lg&&lg2){
   const dVol=lg.vol-lg2.vol,dGTC=lg.nGTC-lg2.nGTC;
   const vS=dVol>=0?'+':'',gS=dGTC>=0?'+':'';
   const vC=dVol>=0?'var(--red)':'var(--green)',gC=dGTC>=0?'var(--green)':'var(--red)';
-  ana+=` So với ${shortD(prev)}: Vol <span style="color:${vC};font-weight:700">${vS}${fmt(dVol)}</span> · GTC <span style="color:${gC};font-weight:700">${gS}${fmt(dGTC)}</span>.`;
+  const vLabel=dVol>=0?'Volume giao tăng':'Volume giao giảm',gLabel=dGTC>=0?'Volume GTC tăng':'Volume GTC giảm';
+  ana+=`<br>So với ${shortD(prev)}: ${vLabel} <span style="color:${vC};font-weight:700">${fmt(Math.abs(dVol))} đơn</span><br>${gLabel} <span style="color:${gC};font-weight:700">${fmt(Math.abs(dGTC))} đơn</span>`;
   let maxDrop=null,maxAM='';
   names.forEach(name=>{const c1=pivot[name]?.[latest]?.vol??null,c2=pivot[name]?.[prev]?.vol??null;if(c1!==null&&c2!==null){const drop=c2-c1;if(maxDrop===null||drop>maxDrop){maxDrop=drop;maxAM=name;}}});
-  if(maxAM&&maxDrop>0)ana+=` AM giảm Vol nhiều nhất: <strong>${maxAM}</strong> (▼ ${fmt(maxDrop)}).`;
+  if(maxAM&&maxDrop>0)ana+=`<br>AM giảm Vol nhiều nhất: <strong>${maxAM}</strong> (▼ ${fmt(maxDrop)} đơn)`;
  }
  if(ana)h+=`<div class="analysis-box">${ana}</div>`;
  return h;
@@ -326,7 +327,12 @@ function renderGTCBcTable(rows,dates,last5D){
  }
  h+='</tbody></table></div>';
  const lg=gPivot[latest];
- if(lg)h+=`<div class="analysis-box">🏪 <strong>BC ngày ${shortD(latest)}:</strong> ${displayNames.length} bưu cục active · Grand Total Vol <strong>${fmt(lg.vol)}</strong> · GTC <strong>${fmt(lg.nGTC)}</strong> đơn (<span style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'};font-weight:700">${lg.gtc.toFixed(1)}%</span>).</div>`;
+ if(lg){
+  const lg2p=gPivot[dates[1]];
+  let bcAna=`🏪 Ngày ${shortD(latest)}:<br>Tổng <strong>${displayNames.length}</strong> bưu cục active<br>Grand Total Vol <strong>${fmt(lg.vol)}</strong> đơn · GTC <strong style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'}">${fmt(lg.nGTC)}</strong> đơn (<span style="color:${lg.gtc>=65?'var(--green)':lg.gtc>=50?'var(--yellow)':'var(--red)'};font-weight:700">${lg.gtc.toFixed(1)}%</span>)`;
+  if(lg2p){const dV=lg.vol-lg2p.vol,dG=lg.nGTC-lg2p.nGTC;bcAna+=`<br>So với ${shortD(dates[1])}: Volume giao <span style="color:${dV>=0?'var(--red)':'var(--green)'};font-weight:700">${dV>=0?'+':''}${fmt(dV)} đơn</span> · GTC <span style="color:${dG>=0?'var(--green)':'var(--red)'};font-weight:700">${dG>=0?'+':''}${fmt(dG)} đơn</span>`;}
+  h+=`<div class="analysis-box">${bcAna}</div>`;
+ }
  return h;
 }
 function renderGTC(pid){
