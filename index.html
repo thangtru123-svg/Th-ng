@@ -775,12 +775,53 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   }
   return h;
  }
+ function alertBCTbl(rows){
+  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const data=rows.slice(1).filter(r=>r.length>4&&(r[1]||'').trim());
+  const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
+  const dRows=data.filter(r=>!isGrand(r));
+  const allD=[...new Set(dRows.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const dates=allD.slice(0,7);
+  if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const pivot={};
+  dRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[4])||0)*100,cnt:Math.round(parseFloat(r[5])||0)};});
+  const latest=dates[0];
+  const alertBC=Object.keys(pivot).filter(bc=>(pivot[bc][latest]?.pct??100)<80&&(pivot[bc][latest]?.vol??0)>0);
+  if(!alertBC.length)return'<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có %Ontime &lt; 80% hôm nay.</p>';
+  alertBC.sort((a,b)=>(pivot[b][latest]?.vol??0)-(pivot[a][latest]?.vol??0));
+  const cs='padding:5px 8px;';
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEF2F2">
+   <tr>
+    <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEF2F2">STT</th>
+    <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEF2F2">Bưu Cục</th>
+    <th rowspan="2" style="${cs}min-width:80px;position:sticky;left:170px;z-index:5;background:#FEF2F2">AM</th>
+    ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
+    <th rowspan="2" style="${cs}text-align:center;background:#FEF2F2;white-space:nowrap">TB %Ontime</th>
+   </tr>
+   <tr>${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
+  </thead><tbody>`;
+  alertBC.forEach((bc,i)=>{
+   const row=pivot[bc];
+   const validD=dates.filter(d=>row[d]);
+   const avgPct=validD.length?validD.reduce((s,d)=>s+row[d].pct,0)/validD.length:0;
+   const countBelow=dates.filter(d=>row[d]&&row[d].pct<80).length;
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
+   dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';const bgBad=c.pct<yellowThr?'background:#FFF1F2':'';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;${bgBad}">${fmt(c.vol)}</td><td style="${cs}text-align:center;${bgBad}"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
+   const ac=avgPct>=greenThr?'var(--green)':avgPct>=yellowThr?'var(--yellow)':'var(--red)';
+   h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td></tr>`;
+  });
+  h+='</tbody></table></div>';
+  h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có Vol LTC cao nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
+  return h;
+ }
  return`<div class="page-header">
   <div class="page-title">${title}</div>
   <div class="page-meta"><span class="tag tag-orange">⏱️ 15 ngày gần nhất · ONTIME SLA TTS</span><span>%Ontime: Xanh ≥${greenThr}% · Vàng ≥${yellowThr}% · Đỏ &lt;${yellowThr}%</span></div>
  </div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${amTbl(rowsAM)}</div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>`;
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>
+ ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">7 ngày gần nhất · Sắp xếp: Vol LTC ngày gần nhất cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
+
 }
 
 /* ===== DASHBOARD 0: CHART FD NGÀY ===== */
