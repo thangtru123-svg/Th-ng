@@ -374,6 +374,23 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
 // FD sheets cols: name(0), Ngày(1), %Vol(2), %FD(3), ...
 // BC FD sheets: same (BC name in col 0)
 window._FD={};
+// Parse Grand Total theo AM từ section 2 (H35+): AM name + ~60 giá trị float ngày → trung bình
+function parseGTAM(rows){
+ if(!rows||rows.length<2)return{};
+ let cnt=0,hIdx=-1;
+ for(let i=0;i<rows.length;i++){if((rows[i][7]||'').trim()==='AM'){cnt++;if(cnt>=2){hIdx=i;break;}}}
+ if(hIdx<0)return{};
+ const res={};
+ for(let i=hIdx+1;i<rows.length;i++){
+  const name=(rows[i][7]||'').trim();if(!name)continue;
+  const vals=[];
+  for(let c=8;c<=67;c++){const v=(rows[i][c]||'').trim();if(v&&!v.includes('DIV')&&!v.includes('#'))vals.push(parsePct(v));}
+  if(!vals.length)continue;
+  const avg=vals.reduce((a,b)=>a+b,0)/vals.length;
+  res[name]=avg<1?avg*100:avg;
+ }
+ return res;
+}
 const DC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
 function buildFDDayPage(fd){
  if(!fd.totalAM||fd.totalAM.length<2)return errPage('Không có dữ liệu FD');
@@ -457,6 +474,37 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
     }
    });
    h+=`</div></div>`;
+  }
+ }
+ // Grand Total theo AM (section 2 / H35+)
+ if(nameLabel==='AM'){
+  const gtData=sheetArr.map(s=>parseGTAM(s));
+  const allAMs2=new Set();
+  gtData.forEach(d=>Object.keys(d).forEach(n=>allAMs2.add(n)));
+  const isGT=n=>n.toLowerCase().includes('grand total');
+  const amList=[...allAMs2].filter(n=>!isGT(n)).sort((a,b)=>(gtData[0][b]??-1)-(gtData[0][a]??-1));
+  const gtName=[...allAMs2].find(n=>isGT(n));
+  if(amList.length){
+   const cs2='padding:6px 10px;';
+   h+=`<div style="margin-top:20px"><div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px">📌 Grand Total %FD theo AM (Toàn kỳ)</div><div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead><tr>`;
+   h+=`<th style="${cs2}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th>`;
+   h+=`<th style="${cs2}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:130px">AM</th>`;
+   labels.forEach((l,si)=>{const bg=DC[si%DC.length];h+=`<th style="${cs2}text-align:center;border-left:1px solid #E5E7EB;min-width:80px;background:${bg}">${l}</th>`;});
+   h+=`</tr></thead><tbody>`;
+   amList.forEach((name,i)=>{
+    h+=`<tr><td style="${cs2}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>`;
+    h+=`<td style="${cs2}font-weight:600;white-space:nowrap;position:sticky;left:32px;background:#fff;z-index:2">${name}</td>`;
+    gtData.forEach((d,si)=>{const bg=DC[si%DC.length];const v=d[name]??null;const red=v!==null&&v>=15;
+     h+=`<td style="${cs2}text-align:center;border-left:1px solid #E5E7EB;background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${v!==null?v.toFixed(2)+'%':'—'}</td>`;});
+    h+='</tr>';
+   });
+   if(gtName){
+    h+=`<tr class="tot"><td style="${cs2}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs2}font-weight:800;position:sticky;left:32px;background:#F8F9FA;z-index:2">${gtName}</td>`;
+    gtData.forEach((d,si)=>{const bg=DC[si%DC.length];const v=d[gtName]??null;const red=v!==null&&v>=15;
+     h+=`<td style="${cs2}text-align:center;border-left:1px solid #E5E7EB;background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?800:'inherit'}">${v!==null?v.toFixed(2)+'%':'—'}</td>`;});
+    h+='</tr>';
+   }
+   h+=`</tbody></table></div></div>`;
   }
  }
  return h;
