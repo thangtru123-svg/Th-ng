@@ -1067,9 +1067,9 @@ function buildAgingHTML(rows){
  amAna+=top5AM.map((r,i)=>{const cur=r[latest]||0,prv=r[prev]||0,d=cur-prv;const c=d<0?'var(--green)':d>0?'var(--red)':'var(--text-sub)';return`<strong>${r.am||'?'}</strong> ${cur.toLocaleString()} đơn <span style="color:${c};font-size:11px">(${d>0?'+':''}${d})</span>`;}).join(' · ');
  h+=anaBox(amAna);
 
- // ─── Bảng BC tất cả (ổn định + bất ổn) ───
+ // ─── Bảng BC ổn định (loại bỏ bất ổn + Kho Giao Hàng Nặng) ───
  const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
- const bcArr=Object.values(bcMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ const bcArr=Object.values(bcMap).filter(r=>!unstableBCSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  h+=buildTable(bcArr,'bc','Theo Bưu Cục — 7 ngày gần nhất','🏪',`${bcArr.length} bưu cục`);
  const stableArr=bcArr.filter(r=>!unstableBCSet.has(r.bc));
  const stableCur=stableArr.reduce((s,r)=>s+(r[latest]||0),0);
