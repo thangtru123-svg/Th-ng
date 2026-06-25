@@ -348,6 +348,8 @@ function renderGTC(pid){
  const last5D=new Set(allD.slice(0,5));
  document.getElementById(pid+'_amTable').innerHTML=renderGTCAmTable(rowsAM,dates);
  document.getElementById(pid+'_bcTable').innerHTML=renderGTCBcTable(rowsBC,dates,last5D);
+ addBCSearch(document.getElementById(pid+'_amTable'));
+ addBCSearch(document.getElementById(pid+'_bcTable'));
 }
 function buildGTCPage(rowsAM,rowsBC,title,pid){
  window._GTC[pid]={rowsAM,rowsBC};
@@ -372,6 +374,34 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
 
 /* ===== DASHBOARD 3: FD NGÀY ===== */
 // FD sheets cols: name(0), Ngày(1), %Vol(2), %FD(3), ...
+/* ===== BC SEARCH UTILITY ===== */
+function addBCSearch(el,nc){
+ if(!el)return;nc=nc??1;
+ el.querySelectorAll('table').forEach(tbl=>{
+  if(tbl.dataset.bcSrch)return;tbl.dataset.bcSrch='1';
+  const rows=[...tbl.querySelectorAll('tbody tr')];
+  const names=[...new Set(rows.map(r=>(r.cells[nc]?.textContent||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+  if(!names.length)return;
+  const lid='dl'+Math.random().toString(36).slice(2,8);
+  const bar=document.createElement('div');
+  bar.style.cssText='padding:6px 10px;background:#FFF8F5;border-bottom:1px solid #F5D0BE;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;flex-shrink:0';
+  bar.innerHTML=`<span style="font-size:13px">🔍</span><input list="${lid}" type="text" placeholder="Tìm Bưu Cục / AM..." style="border:1px solid #D1D5DB;border-radius:6px;padding:4px 9px;font-size:12px;flex:1;max-width:260px;outline:none;background:#fff"><datalist id="${lid}">${names.map(n=>`<option value="${n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`).join('')}</datalist><span style="font-size:11px;color:var(--text-sub);white-space:nowrap"></span><button title="Xóa bộ lọc" style="border:1px solid #E5E7EB;background:#fff;border-radius:5px;cursor:pointer;font-size:11px;color:#9CA3AF;padding:3px 8px">✕</button>`;
+  const input=bar.querySelector('input'),cntEl=bar.querySelector('span:last-of-type'),btn=bar.querySelector('button');
+  const doFilter=()=>{
+   const v=input.value.trim().toLowerCase();let vis=0;
+   tbl.querySelectorAll('tbody tr').forEach(r=>{
+    if(r.classList.contains('tot')||r.parentElement.tagName==='TFOOT'){r.style.display='';return;}
+    const m=!v||(r.cells[nc]?.textContent||'').toLowerCase().includes(v);
+    r.style.display=m?'':'none';if(m)vis++;
+   });
+   cntEl.textContent=v?`${vis} kết quả`:'';
+  };
+  input.addEventListener('input',doFilter);
+  btn.addEventListener('click',()=>{input.value='';doFilter();});
+  tbl.parentElement.insertBefore(bar,tbl);
+ });
+}
+
 // BC FD sheets: same (BC name in col 0)
 window._FD={};
 const DC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
@@ -403,6 +433,8 @@ function renderFDDay(){
  const dates=allD.filter(d=>d>=lo&&d<=hi);
  document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM');
  document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục');
+ addBCSearch(document.getElementById('fdDayAMTable'));
+ addBCSearch(document.getElementById('fdDayBCTable'));
 }
 function buildFDDayTable(sheetArr,labels,dates,nameLabel){
  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
@@ -574,6 +606,8 @@ function renderFDWeek(){
  const selWeeks=weeks.slice(lo,hi+1);
  document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],false,selWeeks);
  document.getElementById('fdWkBCTable').innerHTML=buildFDWeekTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],true,selWeeks);
+ addBCSearch(document.getElementById('fdWkAMTable'));
+ addBCSearch(document.getElementById('fdWkBCTable'));
 }
 function buildFDWeekPage(fd){
  const amP=parseWeeklySection(fd.totalAM,'AM');
@@ -1013,6 +1047,7 @@ async function buildAgingPage(){
   const rows=parseCsvRaw(await resp.text());
   window._agingRows=rows;
   el.innerHTML=buildAgingHTML(rows);
+  addBCSearch(el);
  }catch(e){el.innerHTML=errPage(`Aging sheet: ${e.message}`);}
 }
 
@@ -1164,14 +1199,16 @@ async function init(){
  else p4el.innerHTML=errPage('Không thể tải dữ liệu FD Tuần.');
  // p5 — ODR
  const p5el=document.getElementById('p5');
- if(R['ODR TTS - AM']&&R['ODR TTS - Bưu Cục'])
+ if(R['ODR TTS - AM']&&R['ODR TTS - Bưu Cục']){
   p5el.innerHTML=buildOntimePage(R['ODR TTS - AM'],R['ODR TTS - Bưu Cục'],'Tổng quan ODR TTS','Vol GTC','GTC đúng Ontime',98,96);
- else p5el.innerHTML=errPage('Không thể tải ODR TTS. Kiểm tra sheet "ODR TTS - AM" / "ODR TTS - Bưu Cục".');
+  addBCSearch(p5el);
+ }else p5el.innerHTML=errPage('Không thể tải ODR TTS. Kiểm tra sheet "ODR TTS - AM" / "ODR TTS - Bưu Cục".');
  // p6 — OPR
  const p6el=document.getElementById('p6');
- if(R['OPR TTS - AM']&&R['OPR TTS - Bưu Cục'])
+ if(R['OPR TTS - AM']&&R['OPR TTS - Bưu Cục']){
   p6el.innerHTML=buildOntimePage(R['OPR TTS - AM'],R['OPR TTS - Bưu Cục'],'Tổng quan OPR TTS','Vol LTC','LTC đúng Ontime',90,80);
- else p6el.innerHTML=errPage('Không thể tải OPR TTS. Kiểm tra sheet "OPR TTS - AM" / "OPR TTS - Bưu Cục".');
+  addBCSearch(p6el);
+ }else p6el.innerHTML=errPage('Không thể tải OPR TTS. Kiểm tra sheet "OPR TTS - AM" / "OPR TTS - Bưu Cục".');
  // p7 — Aging (await để có data cho overview)
  await buildAgingPage();
  // p12 — AI
