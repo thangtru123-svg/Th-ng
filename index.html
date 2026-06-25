@@ -658,7 +658,7 @@ function buildFDWeekPage(fd){
  const amP=parseWeeklySection(fd.totalAM,'AM');
  if(!amP||!amP.weeks.length)return errPage('Không có dữ liệu tuần FD');
  const weeks=amP.weeks;
- const wTo=weeks[weeks.length-1],wFrom=weeks[Math.max(0,weeks.length-2)];
+ const wFrom=weeks[Math.min(1,weeks.length-1)],wTo=weeks[0]; // mặc định 2 tuần gần nhất
  const mkWk=sv=>weeks.map(w=>`<option value="${w}"${w===sv?' selected':''}>Tuần ${w}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">Tổng quan Tỉ Lệ Trả - Tuần</div>
