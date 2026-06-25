@@ -1302,7 +1302,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
   const ltcPct=ltc&&ltc.vol>0?ltc.nLTC/ltc.vol*100:null;
   tbl1+=`<tr>
    <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
-   <td style="${cs}font-weight:700;position:sticky;left:29px;background:#fff;z-index:2"><span style="display:block;max-width:193px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${am}</span></td>`;
+   <td style="${cs}font-weight:700;position:sticky;left:29px;background:#fff;z-index:2"><span style="white-space:nowrap">${am}</span></td>`;
   tbl1+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
   tbl1+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
   tbl1+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
@@ -1365,7 +1365,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
    const tong=computeTong(piv2,am);const odr=odrMap[am];const opr=oprMap[am];
    tbl2+=`<tr>
     <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
-    <td style="${cs}font-weight:700;position:sticky;left:29px;background:#fff;z-index:2"><span style="display:block;max-width:193px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${am}</span></td>`;
+    <td style="${cs}font-weight:700;position:sticky;left:29px;background:#fff;z-index:2"><span style="white-space:nowrap">${am}</span></td>`;
    tbl2+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca1.gtc)}">${ca1.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
    tbl2+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca2.gtc)}">${ca2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
    tbl2+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ton.gtc)}">${ton.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
