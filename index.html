@@ -185,6 +185,8 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <button class="nav-item" onclick="show('p6',this)"><span class="icon">🚀</span>Tổng quan OPR TTS</button>
  <div class="nav-section">Aging</div>
  <button class="nav-item" onclick="show('p7',this)"><span class="icon">⏳</span>Aging &gt; 5 ngày</button>
+ <div class="nav-section">Vận Hành Ngày</div>
+ <button class="nav-item" onclick="show('p16',this)"><span class="icon">📋</span>Báo Cáo Vận Hành Ngày</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -203,6 +205,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p12"></div>
+ <div class="page" id="p16"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -1152,6 +1155,209 @@ async function runAIAnalysis(){
 }
 function copyAIResult(){if(window._lastAIResult)navigator.clipboard.writeText(window._lastAIResult).then(()=>{const s=document.getElementById('aiStatus');s.textContent='✅ Đã copy!';setTimeout(()=>s.textContent='',2000);});}
 
+/* ===== DASHBOARD 9: BÁO CÁO VẬN HÀNH NGÀY (p16) ===== */
+// GTC ca 1,2: col[0]=AM, col[1]=Loại hàng, col[2]=Ngày, col[3]=Vol, col[4]=%Gán, col[5]=%GTC, col[6]=Số đơn GTC
+// LTC - AM:   col[0]=AM (' '=Grand Total), col[1]=Ngày, col[2]=Vol, col[3]=%Gán, col[4]=Số đơn LTC
+// ODR TTS-AM: col[0]=AM, col[1]=Ngày, col[2]=Vol GTC, col[3]=% Ontime, col[4]=GTC đúng Ontime
+function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
+ const cs='padding:5px 9px;';const cs2='padding:5px 9px;text-align:right;';const cs3='padding:5px 9px;text-align:center;';
+ // Parse helper: group by AM and Loại hàng for latest date
+ function parseCa12(rows){
+  if(!rows||rows.length<2)return null;
+  const data=rows.slice(1).filter(r=>r.length>5&&(r[2]||'').match(/\d{4}-\d{2}-\d{2}/));
+  const allD=[...new Set(data.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0],prev=allD[1];if(!latest)return null;
+  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
+  const pivot={};// pivot[am][loai]={vol,gan,gtc,nGTC}
+  data.filter(r=>isoD(r[2])===latest&&!isGrand(r)).forEach(r=>{
+   const am=(r[0]||'').trim(),loai=(r[1]||'').trim();if(!am||!loai)return;
+   if(!pivot[am])pivot[am]={};
+   pivot[am][loai]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};
+  });
+  const grandByLoai={};
+  data.filter(r=>isoD(r[2])===latest&&isGrand(r)).forEach(r=>{
+   const loai=(r[1]||'').trim();if(!loai)return;
+   grandByLoai[loai]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};
+  });
+  const prevGrand={};
+  if(prev)data.filter(r=>isoD(r[2])===prev&&isGrand(r)).forEach(r=>{
+   const loai=(r[1]||'').trim();if(!loai)return;
+   prevGrand[loai]={vol:Math.round(parseFloat(r[3])||0),nGTC:Math.round(parseFloat(r[6])||0)};
+  });
+  return{pivot,grandByLoai,prevGrand,latest,prev};
+ }
+ function parseLTC(rows){
+  if(!rows||rows.length<2)return{};
+  const data=rows.slice(1).filter(r=>r.length>3);
+  const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0];if(!latest)return{};
+  const ltc={};
+  data.filter(r=>isoD(r[1])===latest).forEach(r=>{
+   const am=(r[0]||'').trim();
+   const isGrand=!am;
+   const key=isGrand?'__grand__':am;
+   ltc[key]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,nLTC:Math.round(parseFloat(r[4])||0)};
+  });
+  return ltc;
+ }
+ function parseODR(rows){
+  if(!rows||rows.length<2)return{};
+  const data=rows.slice(1).filter(r=>r.length>3);
+  const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0];if(!latest)return{};
+  const odr={};
+  data.filter(r=>isoD(r[1])===latest).forEach(r=>{
+   const am=(r[0]||'').trim();
+   const isGrand=!am||(r[0]||'').toLowerCase().includes('grand total');
+   odr[isGrand?'__grand__':am]=parsePct(r[3]);
+  });
+  return odr;
+ }
+ function computeTong(piv,am){
+  let tv=0,tg=0,tgv=0;
+  ['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(l=>{const d=piv[am]?.[l];if(d){tv+=d.vol;tg+=d.nGTC;tgv+=d.vol*d.gan/100;}});
+  return{vol:tv,gan:tv>0?tgv/tv*100:0,gtc:tv>0?tg/tv*100:0,nGTC:tg};
+ }
+ function computeGrandTong(grandByLoai){
+  let tv=0,tg=0,tgv=0;
+  ['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(l=>{const d=grandByLoai[l];if(d){tv+=d.vol;tg+=d.nGTC;tgv+=d.vol*d.gan/100;}});
+  return{vol:tv,gan:tv>0?tgv/tv*100:0,gtc:tv>0?tg/tv*100:0,nGTC:tg};
+ }
+ const gc=v=>v>=65?'g':v>=50?'m':'b';
+ const gco=v=>v>=98?'g':v>=95?'m':'b';
+
+ const p1=parseCa12(rowsCa12);
+ if(!p1)return errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
+ const{pivot,grandByLoai,prevGrand,latest,prev}=p1;
+ const ltcMap=parseLTC(rowsLTC);
+ const p2=parseCa12(rowsCa12TTS);
+ const odrMap=parseODR(rowsODR);
+
+ // Sorted AM list (by Tổng %GTC asc)
+ const amNames=Object.keys(pivot).sort((a,b)=>computeTong(pivot,a).gtc-computeTong(pivot,b).gtc);
+
+ // === TABLE 1 ===
+ let tbl1=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px;border-collapse:collapse"><thead>
+  <tr>
+   <th rowspan="2" style="${cs}text-align:center;width:28px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
+   <th rowspan="2" style="${cs}min-width:120px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
+   <th colspan="2" style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Ca 1</th>
+   <th colspan="2" style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Ca 2</th>
+   <th colspan="2" style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Hàng Tồn</th>
+   <th colspan="4" style="${cs}text-align:center;border-left:3px solid #FDBA74;background:#FEEDE4">Tổng Giao</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:3px solid #99F6E4;background:#F0FDFA">LẤY</th>
+  </tr>
+  <tr>
+   <th style="${cs}text-align:right;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th>
+   <th style="${cs}text-align:right;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th>
+   <th style="${cs}text-align:right;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th>
+   <th style="${cs}text-align:right;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th><th style="${cs}text-align:right;background:#FEEDE4">Số GTC</th>
+   <th style="${cs}text-align:right;border-left:3px solid #99F6E4;background:#F0FDFA">Vol</th><th style="${cs}text-align:center;background:#F0FDFA">%Gán</th><th style="${cs}text-align:center;background:#F0FDFA">%LTC</th>
+  </tr>
+ </thead><tbody>`;
+ amNames.forEach((am,i)=>{
+  const ca1=pivot[am]?.['Hàng Mới Ca 1'];const ca2=pivot[am]?.['Hàng Mới Ca 2'];const ton=pivot[am]?.['Hàng Tồn'];
+  const tong=computeTong(pivot,am);const ltc=ltcMap[am];
+  const ltcPct=ltc&&ltc.vol>0?ltc.nLTC/ltc.vol*100:null;
+  tbl1+=`<tr>
+   <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
+   <td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
+  tbl1+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
+  tbl1+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
+  tbl1+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
+  tbl1+=tong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(tong.vol)}</td><td style="${cs3}">${tong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(tong.gtc)}">${tong.gtc.toFixed(1)}%</span></td><td style="${cs2}color:var(--green);font-weight:600">${fmt(tong.nGTC)}</td>`:`<td colspan="4" style="${cs3}border-left:3px solid #FDBA74;color:var(--text-sub)">—</td>`;
+  tbl1+=ltc&&ltc.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(ltc.vol)}</td><td style="${cs3}">${ltc.gan.toFixed(1)}%</td><td style="${cs3}">${ltcPct!==null?ltcPct.toFixed(1)+'%':'—'}</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4;color:var(--text-sub)">—</td>`;
+  tbl1+='</tr>';
+ });
+ // Grand Total row
+ const gCa1=grandByLoai['Hàng Mới Ca 1'],gCa2=grandByLoai['Hàng Mới Ca 2'],gTon=grandByLoai['Hàng Tồn'];
+ const gTong=computeGrandTong(grandByLoai);const gLTC=ltcMap['__grand__'];
+ const gLTCPct=gLTC&&gLTC.vol>0?gLTC.nLTC/gLTC.vol*100:null;
+ tbl1+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:700;position:sticky;left:29px;background:#F8F9FA;z-index:2">Grand Total</td>`;
+ tbl1+=gCa1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(gCa1.vol)}</td><td style="${cs3}">${gCa1.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BFDBFE">—</td>`;
+ tbl1+=gCa2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(gCa2.vol)}</td><td style="${cs3}">${gCa2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0">—</td>`;
+ tbl1+=gTon?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(gTon.vol)}</td><td style="${cs3}">${gTon.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA">—</td>`;
+ tbl1+=gTong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(gTong.vol)}</td><td style="${cs3}">${gTong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gTong.gtc)}">${gTong.gtc.toFixed(1)}%</span></td><td style="${cs2}color:var(--green);font-weight:700">${fmt(gTong.nGTC)}</td>`:`<td colspan="4" style="${cs3}border-left:3px solid #FDBA74">—</td>`;
+ tbl1+=gLTC&&gLTC.vol>0?`<td style="${cs2}border-left:3px solid #99F6E4">${fmt(gLTC.vol)}</td><td style="${cs3}">${gLTC.gan.toFixed(1)}%</td><td style="${cs3}">${gLTCPct!==null?gLTCPct.toFixed(1)+'%':'—'}</td>`:`<td colspan="3" style="${cs3}border-left:3px solid #99F6E4">—</td>`;
+ tbl1+='</tr></tbody></table></div>';
+ // Analysis
+ let ana1='';
+ if(gTong.vol>0){
+  const prevGTong=(()=>{let tv=0,tg=0;['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(l=>{const d=prevGrand[l];if(d){tv+=d.vol;tg+=d.nGTC;}});return{vol:tv,nGTC:tg,gtc:tv>0?tg/tv*100:0};})();
+  const pC=gTong.gtc>=65?'var(--green)':gTong.gtc>=50?'var(--yellow)':'var(--red)';
+  ana1=`📦 <strong>Ngày ${shortD(latest)}:</strong> Tổng Giao <strong>${fmt(gTong.vol)}</strong> đơn · GTC <strong style="color:${pC}">${fmt(gTong.nGTC)}</strong> đơn (<span style="color:${pC};font-weight:700">${gTong.gtc.toFixed(1)}%</span>)`;
+  if(prev&&prevGTong.vol>0){
+   const dV=gTong.vol-prevGTong.vol,dG=gTong.nGTC-prevGTong.nGTC,dP=gTong.gtc-prevGTong.gtc;
+   ana1+=`<br>So với ${shortD(prev)}: Vol <span style="color:${dV>=0?'var(--red)':'var(--green)'};font-weight:700">${dV>=0?'+':''}${fmt(dV)}</span> · GTC <span style="color:${dG>=0?'var(--green)':'var(--red)'};font-weight:700">${dG>=0?'+':''}${fmt(dG)}</span> · %GTC <span style="color:${dP>=0?'var(--green)':'var(--red)'};font-weight:700">${dP>=0?'+':''}${dP.toFixed(1)}%</span>`;
+  }
+  if(amNames.length){
+   const best=amNames[amNames.length-1],worst=amNames[0];
+   ana1+=`<br>AM tốt nhất: <strong>${best}</strong> (<span style="color:var(--green);font-weight:700">${computeTong(pivot,best).gtc.toFixed(1)}%</span>) · Tệ nhất: <strong>${worst}</strong> (<span style="color:var(--red);font-weight:700">${computeTong(pivot,worst).gtc.toFixed(1)}%</span>)`;
+  }
+ }
+
+ // === TABLE 2 ===
+ let tbl2Html='';
+ if(p2){
+  const{pivot:piv2,grandByLoai:grand2,latest:lat2}=p2;
+  const amNames2=Object.keys(piv2).sort((a,b)=>computeTong(piv2,a).gtc-computeTong(piv2,b).gtc);
+  let tbl2=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px;border-collapse:collapse"><thead>
+  <tr>
+   <th rowspan="2" style="${cs}text-align:center;width:28px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
+   <th rowspan="2" style="${cs}min-width:120px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Ca 1</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Ca 2</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Hàng Tồn</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:3px solid #FDBA74;background:#FEEDE4">Tổng Ngày</th>
+   <th rowspan="2" style="${cs}text-align:center;border-left:3px solid #99F6E4;background:#F0FDFA;min-width:60px">ODR</th>
+  </tr>
+  <tr>
+   <th style="${cs}text-align:right;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th><th style="${cs}text-align:center;background:#EFF6FF">%GTC</th>
+   <th style="${cs}text-align:right;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th><th style="${cs}text-align:center;background:#F0FDF4">%GTC</th>
+   <th style="${cs}text-align:right;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th><th style="${cs}text-align:center;background:#FFF7ED">%GTC</th>
+   <th style="${cs}text-align:right;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th>
+  </tr>
+ </thead><tbody>`;
+  amNames2.forEach((am,i)=>{
+   const ca1=piv2[am]?.['Hàng Mới Ca 1'];const ca2=piv2[am]?.['Hàng Mới Ca 2'];const ton=piv2[am]?.['Hàng Tồn'];
+   const tong=computeTong(piv2,am);const odr=odrMap[am];
+   tbl2+=`<tr>
+    <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
+    <td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
+   tbl2+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca1.gtc)}">${ca1.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
+   tbl2+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca2.gtc)}">${ca2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
+   tbl2+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ton.gtc)}">${ton.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
+   tbl2+=tong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(tong.vol)}</td><td style="${cs3}">${tong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(tong.gtc)}">${tong.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FDBA74;color:var(--text-sub)">—</td>`;
+   tbl2+=odr!=null?`<td style="${cs3}border-left:3px solid #99F6E4"><span class="pct ${gco(odr)}">${odr.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #99F6E4;color:var(--text-sub)">—</td>`;
+   tbl2+='</tr>';
+  });
+  // Grand Total row table 2
+  const gC1=grand2['Hàng Mới Ca 1'],gC2=grand2['Hàng Mới Ca 2'],gT2=grand2['Hàng Tồn'];
+  const gT2ng=computeGrandTong(grand2);const gODR=odrMap['__grand__'];
+  tbl2+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:700;position:sticky;left:29px;background:#F8F9FA;z-index:2">Grand Total</td>`;
+  tbl2+=gC1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(gC1.vol)}</td><td style="${cs3}">${gC1.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gC1.gtc)}">${gC1.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BFDBFE">—</td>`;
+  tbl2+=gC2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(gC2.vol)}</td><td style="${cs3}">${gC2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gC2.gtc)}">${gC2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BBF7D0">—</td>`;
+  tbl2+=gT2?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(gT2.vol)}</td><td style="${cs3}">${gT2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gT2.gtc)}">${gT2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA">—</td>`;
+  tbl2+=gT2ng.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(gT2ng.vol)}</td><td style="${cs3}">${gT2ng.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gT2ng.gtc)}">${gT2ng.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FDBA74">—</td>`;
+  tbl2+=gODR!=null?`<td style="${cs3}border-left:3px solid #99F6E4"><span class="pct ${gco(gODR)}">${gODR.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #99F6E4">—</td>`;
+  tbl2+='</tr></tbody></table></div>';
+  tbl2Html=`<div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🎯</div>B. Báo Cáo Tỷ Lệ GTC TTS</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao · Ngày ${shortD(lat2||latest)}</div></div>
+  ${tbl2}
+ </div>`;
+ }
+ return`<div class="page-header">
+  <div class="page-title">📋 Báo Cáo Vận Hành Ngày</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Ngày ${shortD(latest)}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>A. Báo Cáo Vận Hành Ngày</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao</div></div>
+  ${tbl1}
+  ${ana1?`<div class="analysis-box">${ana1}</div>`:''}
+ </div>
+ ${tbl2Html}`;
+}
+
 /* ===== INIT ===== */
 async function init(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
@@ -1161,7 +1367,8 @@ async function init(){
   'FD Total theo AM','FD SME theo AM','FD TTS theo AM','FD Shopee theo AM',
   'FD Total theo Bưu Cục','FD SME theo Bưu Cục','FD TTS theo Bưu Cục','FD Shopee theo Bưu Cục',
   'ODR TTS - AM','ODR TTS - Bưu Cục',
-  'OPR TTS - AM','OPR TTS - Bưu Cục'
+  'OPR TTS - AM','OPR TTS - Bưu Cục',
+  'GTC ca 1,2 theo AM','LTC - AM','GTC ca 1,2 TTS theo AM'
  ];
  const R={};
  await Promise.all(sheetNames.map(async n=>{try{R[n]=await fetchSheet(n);}catch(e){R[n]=null;console.warn('Lỗi sheet',n,e.message);}}));
@@ -1217,6 +1424,12 @@ async function init(){
  await buildAgingPage();
  // p12 — AI
  buildAIPage();
+ // p16 — Báo Cáo Vận Hành Ngày
+ const p16el=document.getElementById('p16');
+ if(R['GTC ca 1,2 theo AM']){
+  p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM']);
+  addBCSearch(p16el);
+ }else p16el.innerHTML=errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
  btn.classList.remove('spinning');btn.disabled=false;
@@ -1225,7 +1438,7 @@ async function init(){
 
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
- ['p0','p1','p2','p3','p4','p5','p6','p7'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p0','p1','p2','p3','p4','p5','p6','p7','p16'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  ['gtc','aging','ontime'].forEach(id=>destroyChart(id));
  await init();
 };
