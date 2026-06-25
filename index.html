@@ -707,23 +707,26 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
 }
 
 /* ===== DASHBOARD 0: CHART FD NGÀY ===== */
-function renderChartFD(dates,byDate){
+function renderChartFD(dates,fdMap){
  destroyChart('fd');
  const canvas=document.getElementById('chartFD');if(!canvas||!dates.length)return;
  const labels=dates.map(d=>shortD(d));
- const vals=dates.map(d=>byDate[d]!=null?+byDate[d].toFixed(2):null);
- const ptColors=vals.map(v=>v===null?'#9CA3AF':v>=15?'#DC2626':v>=10?'#D97706':'#16A34A');
+ const mkDs=(label,key,color,fill)=>({
+  label,data:dates.map(d=>fdMap[key][d]!=null?+fdMap[key][d].toFixed(2):null),
+  borderColor:color,backgroundColor:fill||'transparent',
+  tension:0.4,pointRadius:4,pointHoverRadius:6,borderWidth:2,fill:!!fill
+ });
  window._charts['fd']=new Chart(canvas,{
   type:'line',
-  data:{labels,datasets:[{
-   label:'%FD Total AM',data:vals,
-   borderColor:'#F15D29',backgroundColor:'rgba(241,93,41,0.08)',
-   tension:0.4,pointRadius:5,pointHoverRadius:7,borderWidth:2.5,
-   pointBackgroundColor:ptColors,pointBorderColor:'#fff',pointBorderWidth:1.5,fill:true
-  }]},
+  data:{labels,datasets:[
+   mkDs('Total','total','#F15D29','rgba(241,93,41,0.06)'),
+   mkDs('SME','sme','#3B82F6'),
+   mkDs('TTS','tts','#16A34A'),
+   mkDs('Shopee','shopee','#8B5CF6')
+  ]},
   options:{responsive:true,interaction:{mode:'index',intersect:false},
    plugins:{legend:{position:'top',labels:{font:{size:12},padding:16}},
-    tooltip:{callbacks:{label:ctx=>`%FD Total AM: ${ctx.raw}%`}}
+    tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.raw}%`}}
    },
    scales:{
     y:{min:0,suggestedMax:25,title:{display:true,text:'%FD'},grid:{color:'#F3F4F6'},ticks:{font:{size:11},callback:v=>v+'%'}},
@@ -732,19 +735,16 @@ function renderChartFD(dates,byDate){
   }
  });
  const anaEl=document.getElementById('anaFD');if(!anaEl||!dates.length)return;
+ const tot=fdMap.total;
  const latest=dates[dates.length-1],prev=dates[dates.length-2];
- const lv=byDate[latest],pv=prev!=null?byDate[prev]:null;
- const trend5=()=>{
-  const recent=dates.slice(-5).map(d=>byDate[d]).filter(v=>v!=null);
-  if(recent.length<3)return null;
-  const lo=(recent[0]+recent[1])/2,hi=(recent[recent.length-2]+recent[recent.length-1])/2;
-  return hi-lo;
- };
+ const lv=tot[latest],pv=prev!=null?tot[prev]:null;
+ const trend5=()=>{const r=dates.slice(-5).map(d=>tot[d]).filter(v=>v!=null);if(r.length<3)return null;return(r[r.length-2]+r[r.length-1])/2-(r[0]+r[1])/2;};
  const t=trend5();
- let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> %FD = <strong style="color:${lv>=15?'var(--red)':lv>=10?'var(--yellow)':'var(--green)'}">${lv?.toFixed(2)}%</strong>.`;
- if(pv!=null){const diff=+(lv-pv).toFixed(2);ana+=` So với ${shortD(prev)}: <span style="color:${diff>0?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'▲ +':'▼ '}${diff}%</span>.`;}
- if(t!=null){const tc=t>0?'var(--red)':'var(--green)';ana+=` Xu hướng 5 ngày gần nhất: <span style="color:${tc};font-weight:600">${t>0?'▲ Tăng':'▼ Giảm'} (${t>0?'+':''}${t.toFixed(2)}%)</span>.`;}
- anaEl.innerHTML=ana;
+ let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> Total <strong style="color:${lv>=15?'var(--red)':lv>=10?'var(--yellow)':'var(--green)'}">${lv?.toFixed(2)}%</strong>`;
+ [['sme','SME'],['tts','TTS'],['shopee','Shopee']].forEach(([k,l])=>{const v=fdMap[k][latest];if(v!=null)ana+=` · ${l} <strong style="color:${v>=15?'var(--red)':v>=10?'var(--yellow)':'var(--green)'}">${v.toFixed(2)}%</strong>`;});
+ if(pv!=null){const diff=+(lv-pv).toFixed(2);ana+=`. So với ${shortD(prev)}: <span style="color:${diff>0?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'▲ +':'▼ '}${diff}%</span>`;}
+ if(t!=null){const tc=t>0?'var(--red)':'var(--green)';ana+=`. Xu hướng 5 ngày: <span style="color:${tc};font-weight:600">${t>0?'▲ Tăng':'▼ Giảm'} (${t>0?'+':''}${t.toFixed(2)}%)</span>`;}
+ anaEl.innerHTML=ana+'.';
 }
 
 /* ===== DASHBOARD 0: TỔNG QUAN ===== */
@@ -859,18 +859,13 @@ function buildOverviewPage(){
  const gtcByDate={};
  gtcRows.forEach(r=>{const d=isoD(r[1]);if(d)gtcByDate[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100};});
  const gtcDates=Object.keys(gtcByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
- // FD Grand Total theo ngày (weighted avg vol×fd từ totalAM)
- const _fdByDate={};
- (window._FD?.totalAM||[]).slice(1).forEach(r=>{
-  const d=isoD(r[1]);if(!d)return;
-  const vol=parsePct(r[2]);const fd=parsePct(r[3]);
-  if(vol>0&&!(r[0]||'').toLowerCase().includes('grand total')){
-   if(!_fdByDate[d])_fdByDate[d]={sv:0,sf:0};
-   _fdByDate[d].sv+=vol;_fdByDate[d].sf+=fd*vol;
-  }
- });
- const fdGTByDate={};Object.keys(_fdByDate).forEach(d=>{const x=_fdByDate[d];if(x.sv>0)fdGTByDate[d]=x.sf/x.sv;});
- const fdDates=Object.keys(fdGTByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
+ // FD Grand Total theo ngày — 4 nhóm (weighted avg vol×fd)
+ const _calcFdGT=rows=>{const bd={};(rows||[]).slice(1).forEach(r=>{const d=isoD(r[1]);if(!d)return;const vol=parsePct(r[2]),fd=parsePct(r[3]);if(vol>0&&!(r[0]||'').toLowerCase().includes('grand total')){if(!bd[d])bd[d]={sv:0,sf:0};bd[d].sv+=vol;bd[d].sf+=fd*vol;}});const gt={};Object.keys(bd).forEach(d=>{if(bd[d].sv>0)gt[d]=bd[d].sf/bd[d].sv;});return gt;};
+ const fdTotal=_calcFdGT(window._FD?.totalAM);
+ const fdSME=_calcFdGT(window._FD?.smeAM);
+ const fdTTS=_calcFdGT(window._FD?.ttsAM);
+ const fdShopee=_calcFdGT(window._FD?.shopeeAM);
+ const fdDates=[...new Set([...Object.keys(fdTotal),...Object.keys(fdSME),...Object.keys(fdTTS),...Object.keys(fdShopee)])].sort((a,b)=>a.localeCompare(b)).slice(-15);
  // Ontime aggregate
  function getOntimeGT(rows){const bd={};(rows||[]).slice(1).forEach(r=>{if((r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim()||r.length<5)return;const d=isoD(r[1]);if(!d)return;if(!bd[d])bd[d]={vol:0,cnt:0};bd[d].vol+=Math.round(parseFloat(r[2])||0);bd[d].cnt+=Math.round(parseFloat(r[4])||0);});return bd;}
  window._ovOdrByDate=getOntimeGT(window._D.odrAM);
@@ -913,7 +908,7 @@ function buildOverviewPage(){
   <div style="padding:16px 20px"><canvas id="chartOntime" style="max-height:300px"></canvas></div>
   <div id="anaOntime" class="analysis-box" style="margin:0 16px 16px"></div>
  </div>`;
- setTimeout(()=>{renderChartGTC(gtcDates,gtcByDate);renderChartFD(fdDates,fdGTByDate);renderChartAging();renderChartOntime();},50);
+ setTimeout(()=>{renderChartGTC(gtcDates,gtcByDate);renderChartFD(fdDates,{total:fdTotal,sme:fdSME,tts:fdTTS,shopee:fdShopee});renderChartAging();renderChartOntime();},50);
 }
 
 /* ===== SPLASH ===== */
