@@ -1195,14 +1195,16 @@ function copyAIResult(){if(window._lastAIResult)navigator.clipboard.writeText(wi
 // GTC ca 1,2: col[0]=AM, col[1]=Loại hàng, col[2]=Ngày, col[3]=Vol, col[4]=%Gán, col[5]=%GTC, col[6]=Số đơn GTC
 // LTC - AM:   col[0]=AM (' '=Grand Total), col[1]=Ngày, col[2]=Vol, col[3]=%Gán, col[4]=Số đơn LTC
 // ODR TTS-AM: col[0]=AM, col[1]=Ngày, col[2]=Vol GTC, col[3]=% Ontime, col[4]=GTC đúng Ontime
-function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
+function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDate){
  const cs='padding:5px 9px;';const cs2='padding:5px 9px;text-align:right;';const cs3='padding:5px 9px;text-align:center;';
  // Parse helper: group by AM and Loại hàng for latest date
- function parseCa12(rows){
+ function parseCa12(rows,forceDate){
   if(!rows||rows.length<2)return null;
   const data=rows.slice(1).filter(r=>r.length>5&&(r[2]||'').match(/\d{4}-\d{2}-\d{2}/));
   const allD=[...new Set(data.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const latest=allD[0],prev=allD[1];if(!latest)return null;
+  const latest=(forceDate&&allD.includes(forceDate))?forceDate:allD[0];
+  const idx=allD.indexOf(latest);const prev=allD[idx+1]||null;
+  if(!latest)return null;
   const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
   const pivot={};// pivot[am][loai]={vol,gan,gtc,nGTC}
   data.filter(r=>isoD(r[2])===latest&&!isGrand(r)).forEach(r=>{
@@ -1222,11 +1224,11 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
   });
   return{pivot,grandByLoai,prevGrand,latest,prev};
  }
- function parseLTC(rows){
+ function parseLTC(rows,forceDate){
   if(!rows||rows.length<2)return{};
   const data=rows.slice(1).filter(r=>r.length>3);
   const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const latest=allD[0];if(!latest)return{};
+  const latest=(forceDate&&allD.includes(forceDate))?forceDate:allD[0];if(!latest)return{};
   const ltc={};
   data.filter(r=>isoD(r[1])===latest).forEach(r=>{
    const am=(r[0]||'').trim();
@@ -1236,12 +1238,12 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
   });
   return ltc;
  }
- function parseOntime(rows){
+ function parseOntime(rows,forceDate){
   // col[0]=AM, col[1]=Ngày, col[2]=Vol, col[3]=% Ontime (0-1), col[4]=Count ontime
   if(!rows||rows.length<2)return{};
   const data=rows.slice(1).filter(r=>r.length>3);
   const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const latest=allD[0];if(!latest)return{};
+  const latest=(forceDate&&allD.includes(forceDate))?forceDate:allD[0];if(!latest)return{};
   const isGrand=r=>!(r[0]||'').trim()||(r[0]||'').toLowerCase().includes('grand total');
   const result={};let gVol=0,gCnt=0;
   data.filter(r=>isoD(r[1])===latest&&!isGrand(r)).forEach(r=>{
@@ -1266,13 +1268,16 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  const gc=v=>v>=65?'g':v>=50?'m':'b';
  const gco=v=>v>=98?'g':v>=95?'m':'b';
 
- const p1=parseCa12(rowsCa12);
+ const p1=parseCa12(rowsCa12,selDate);
  if(!p1)return errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
  const{pivot,grandByLoai,prevGrand,latest,prev}=p1;
- const ltcMap=parseLTC(rowsLTC);
- const p2=parseCa12(rowsCa12TTS);
- const odrMap=parseOntime(rowsODR);
- const oprMap=parseOntime(rowsOPR);
+ const ltcMap=parseLTC(rowsLTC,latest);
+ const p2=parseCa12(rowsCa12TTS,selDate);
+ const odrMap=parseOntime(rowsODR,latest);
+ const oprMap=parseOntime(rowsOPR,latest);
+ // All available dates for selector
+ const _allCa12D=[...new Set((rowsCa12||[]).slice(1).filter(r=>r.length>5).map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ const dateSelect=`<select onchange="window._rerenderDaily(this.value)" style="border:1px solid #E5E7EB;border-radius:6px;padding:4px 8px;font-size:13px;cursor:pointer;background:#fff">${_allCa12D.map(d=>`<option value="${d}"${d===latest?' selected':''}>${shortD(d)}</option>`).join('')}</select>`;
 
  // Sorted AM list (by Tổng %GTC asc)
  const amNames=Object.keys(pivot).sort((a,b)=>computeTong(pivot,a).gtc-computeTong(pivot,b).gtc);
@@ -1390,7 +1395,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  }
  return`<div class="page-header">
   <div class="page-title">📋 Báo Cáo Vận Hành Ngày</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Ngày ${shortD(latest)}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span></div>
+  <div class="page-meta"><span>Chọn ngày: ${dateSelect}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span></div>
  </div>
  <div class="card">
   <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>A. Báo Cáo Vận Hành Ngày</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao</div></div>
@@ -1472,7 +1477,9 @@ async function init(){
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
-  p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM'],R['OPR TTS - AM']);
+  window._DAILY_RAW={ca12:R['GTC ca 1,2 theo AM'],ltc:R['LTC - AM'],ca12tts:R['GTC ca 1,2 TTS theo AM'],odr:R['ODR TTS - AM'],opr:R['OPR TTS - AM']};
+  window._rerenderDaily=function(date){const d=window._DAILY_RAW;const el=document.getElementById('p16');el.innerHTML=buildDailyReportPage(d.ca12,d.ltc,d.ca12tts,d.odr,d.opr,date);addBCSearch(el);};
+  p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM'],R['OPR TTS - AM'],null);
   addBCSearch(p16el);
  }else p16el.innerHTML=errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
  // p0 — Tổng quan (sau khi có đủ data)
