@@ -402,7 +402,7 @@ function addBCSearch(el,nc){
   btn.addEventListener('click',()=>{input.value='';doFilter();});
   tbl.parentElement.insertBefore(bar,tbl);
   // Đẩy thead xuống dưới search bar để không bị che khi sticky
-  requestAnimationFrame(()=>{const h=bar.offsetHeight||37;tbl.querySelectorAll('thead th').forEach(th=>th.style.top=h+'px');});
+  requestAnimationFrame(()=>{const barH=bar.offsetHeight||37;let top=barH;tbl.querySelectorAll('thead tr').forEach(tr=>{tr.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=top+'px';});top+=tr.offsetHeight||34;});});
  });
 }
 
@@ -705,7 +705,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const latest=dates[0];
   const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.pct??999)-(pivot[b][latest]?.pct??999));
   const cs='padding:5px 8px;';
-  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:1100px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
    <tr>
     <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
     <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
