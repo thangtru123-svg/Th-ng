@@ -595,9 +595,10 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const regular=[...allNames].filter(n=>!isGrand(n));
  const grands=[...allNames].filter(n=>isGrand(n));
  const p0Map=wMap[0]||{};
- // Remove rows where all selected weeks have 0% FD (quit employees)
- const active=regular.filter(name=>selWeeks.some(w=>(p0Map[name]?.[w]??0)>0));
- const latestWk=selWeeks[selWeeks.length-1];
+ // latestWk = tuần số lớn nhất trong selWeeks (tránh lỗi AM giảm dần / BC tăng dần)
+ const latestWk=selWeeks.reduce((a,b)=>+b>+a?b:a);
+ // Chỉ giữ BC/AM có số liệu ở tuần gần nhất
+ const active=regular.filter(name=>(p0Map[name]?.[latestWk]??0)>0);
  const sorted=active.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
  const names=[...sorted,...grands];
  const cs='padding:6px 9px;';
