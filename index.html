@@ -852,6 +852,8 @@ function buildAgingHTML(rows){
   {icon:'⚠️',label:'Aging BC bất ổn hôm nay',val:unstableLatest.toLocaleString(),sub:`${unstableBCSet.size} bưu cục bất ổn`,color:'var(--red)'}
  ].forEach(k=>{h+=`<div style="background:var(--card);border-radius:12px;padding:18px 16px;text-align:center;box-shadow:var(--shadow-sm);border-top:3px solid ${k.color}"><div style="font-size:24px;margin-bottom:8px">${k.icon}</div><div style="font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px">${k.label}</div><div style="font-size:32px;font-weight:800;color:${k.color};line-height:1">${k.val}</div><div style="font-size:11px;color:var(--text-sub);margin-top:5px">${k.sub}</div></div>`;});
  h+=`</div>`;
+ // Analysis tổng quan
+ {const stableNow=latestTotal-unstableLatest;const unstablePrvTmp=rows.filter(r=>r[11]===prev&&(r[12]||'').includes('bất ổn')).length;const stablePrvTmp=(byDate[prev]||0)-unstablePrvTmp;const dStable=stableNow-stablePrvTmp;const dUnstable=unstableLatest-unstablePrvTmp;const sTxt=`<span style="color:${delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)'};font-weight:700">${delta>0?'▲ tăng':'▼ giảm'} ${Math.abs(delta).toLocaleString()} đơn</span>`;h+=`<div class="analysis-box" style="margin-bottom:20px">📦 <strong>Tổng Aging ngày ${agingFmtDate(latest)}:</strong> <strong style="color:var(--orange)">${latestTotal.toLocaleString()} đơn</strong> · Ngày ${agingFmtDate(prev)}: <strong>${prevTotal.toLocaleString()} đơn</strong> · ${delta!==0?sTxt:'Không đổi'}<br>BC bất ổn: <strong style="color:var(--red)">${unstableLatest.toLocaleString()} đơn</strong> ${dUnstable!==0?`<span style="color:${dUnstable<0?'var(--green)':'var(--red)'};font-size:11px">(${dUnstable>0?'+':''}${dUnstable})</span>`:''} · BC ổn định: <strong style="color:var(--green)">${stableNow.toLocaleString()} đơn</strong> ${dStable!==0?`<span style="color:${dStable<0?'var(--green)':'var(--red)'};font-size:11px">(${dStable>0?'+':''}${dStable})</span>`:''}</div>`;}
  function buildTable(arr,keyField,title,icon,badge){
   const maxV=Math.max(...arr.map(r=>r[latest]||0),1);
   let t=`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--bg)"><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap">#</th><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
@@ -871,15 +873,43 @@ function buildAgingHTML(rows){
   t+=`<td style="padding:9px 12px;text-align:right;color:${sD<0?'var(--green)':sD>0?'var(--red)':'var(--text-sub)'};font-weight:800;white-space:nowrap">${sD<0?`▼ ${sP-sC}`:sD>0?`▲ ${sC-sP}`:'—'}</td></tr></tfoot></table></div></div>`;
   return t;
  }
+ function anaBox(html){return`<div class="analysis-box" style="margin-top:-14px;margin-bottom:20px">${html}</div>`;}
+ function fmtD(iso){return agingFmtDate(iso);}
+ function diffTag(cur,prv){const d=cur-prv;if(d===0)return`<span style="color:var(--text-sub)">Không đổi</span>`;const c=d<0?'var(--green)':'var(--red)';return`<span style="color:${c};font-weight:700">${d>0?'▲ tăng':'▼ giảm'} ${Math.abs(d).toLocaleString()} đơn</span> so với ${fmtD(prev)}`;}
+
+ // ─── Bảng BC bất ổn ───
  const unstableMap={};unstableRows.forEach(r=>{const bc=r[2],d=r[11];if(!unstableMap[bc])unstableMap[bc]={bc};unstableMap[bc][d]=(unstableMap[bc][d]||0)+1;});
  const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  h+=buildTable(unstableArr,'bc','Bưu Cục Bất Ổn — 7 ngày','⚠️',`${unstableArr.length} bưu cục`);
+ const unstableCur=unstableArr.reduce((s,r)=>s+(r[latest]||0),0);
+ const unstablePrv=unstableArr.reduce((s,r)=>s+(r[prev]||0),0);
+ h+=anaBox(`⚠️ <strong>BC Bất Ổn ngày ${fmtD(latest)}:</strong> <strong style="color:var(--red)">${unstableCur.toLocaleString()} đơn</strong> · ${diffTag(unstableCur,unstablePrv)}`);
+
+ // ─── Bảng AM ───
  const amMap={};recent.forEach(r=>{const am=r[10],d=r[11];if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  h+=buildTable(amArr,'am','Theo AM — 7 ngày gần nhất','👤',`${amArr.length} AM`);
+ const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0);
+ const amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
+ const top5AM=amArr.slice(0,5);
+ let amAna=`👤 <strong>Aging theo AM ngày ${fmtD(latest)}:</strong> <strong style="color:var(--orange)">${amCur.toLocaleString()} đơn</strong> · ${diffTag(amCur,amPrv)}<br>`;
+ amAna+=`Top 5 AM nhiều nhất: `;
+ amAna+=top5AM.map((r,i)=>{const cur=r[latest]||0,prv=r[prev]||0,d=cur-prv;const c=d<0?'var(--green)':d>0?'var(--red)':'var(--text-sub)';return`<strong>${r.am||'?'}</strong> ${cur.toLocaleString()} đơn <span style="color:${c};font-size:11px">(${d>0?'+':''}${d})</span>`;}).join(' · ');
+ h+=anaBox(amAna);
+
+ // ─── Bảng BC tất cả (ổn định + bất ổn) ───
  const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
  const bcArr=Object.values(bcMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  h+=buildTable(bcArr,'bc','Theo Bưu Cục — 7 ngày gần nhất','🏪',`${bcArr.length} bưu cục`);
+ const stableArr=bcArr.filter(r=>!unstableBCSet.has(r.bc));
+ const stableCur=stableArr.reduce((s,r)=>s+(r[latest]||0),0);
+ const stablePrv=stableArr.reduce((s,r)=>s+(r[prev]||0),0);
+ const top5Stable=stableArr.sort((a,b)=>(b[latest]||0)-(a[latest]||0)).slice(0,5);
+ let bcAna=`🏪 <strong>BC Ổn Định ngày ${fmtD(latest)}:</strong> <strong style="color:var(--green)">${stableCur.toLocaleString()} đơn</strong> · ${diffTag(stableCur,stablePrv)}<br>`;
+ bcAna+=`Top 5 BC ổn định nhiều nhất: `;
+ bcAna+=top5Stable.map(r=>{const cur=r[latest]||0,prv=r[prev]||0,d=cur-prv;const c=d<0?'var(--green)':d>0?'var(--red)':'var(--text-sub)';return`<strong>${r.bc||'?'}</strong> ${cur.toLocaleString()} đơn <span style="color:${c};font-size:11px">(${d>0?'+':''}${d})</span>`;}).join(' · ');
+ h+=anaBox(bcAna);
+
  return`<div style="padding:4px 0">${h}</div>`;
 }
 async function buildAgingPage(){
