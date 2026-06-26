@@ -1100,7 +1100,7 @@ function buildAgingHTML(rows){
  h+=buildTable(unstableArr,'bc','Bưu Cục Bất Ổn — 7 ngày','⚠️',`${unstableArr.length} bưu cục`,'none',unstableAna);
 
  // ─── Bảng AM ───
- const amMap={};recent.forEach(r=>{const am=r[10],d=r[11];if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+ const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0);
  const amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
