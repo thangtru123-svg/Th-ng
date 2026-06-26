@@ -219,6 +219,9 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
+ <button class="refresh-btn" id="tgSidebarBtn" onclick="sendAgingToTelegram()" style="background:rgba(33,150,243,0.15);border-color:rgba(33,150,243,0.35);color:#42a5f5;margin-top:4px">
+  <span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram
+ </button>
  <div class="last-update" id="lastUpdate"></div>
 </nav>
 
@@ -1246,7 +1249,9 @@ async function sendAgingToTelegram(){
  if(!rows||!rows.length){alert('Chưa có dữ liệu Aging! Vui lòng chờ trang tải xong.');return;}
 
  const btn=document.getElementById('tgAgingBtn');
- btn.disabled=true;btn.textContent='⏳ Đang gửi...';
+ const btnSb=document.getElementById('tgSidebarBtn');
+ if(btn){btn.disabled=true;btn.textContent='⏳ Đang gửi...';}
+ if(btnSb){btnSb.disabled=true;btnSb.innerHTML='<span>⏳</span> Đang gửi...';}
 
  try{
   // ── Tính dữ liệu ──
@@ -1327,10 +1332,15 @@ BC bất ổn: ${num(unstableCur)} đơn (${trend(unstableCur,unstablePrv)}) · 
   await new Promise(r=>setTimeout(r,500));
   await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg4));
 
-  btn.textContent='✅ Đã gửi Telegram!';btn.style.background='#22C55E';
-  setTimeout(()=>{btn.disabled=false;btn.textContent='📤 Gửi Telegram';btn.style.background='';},3000);
+  if(btn){btn.textContent='✅ Đã gửi!';btn.style.background='#22C55E';}
+  if(btnSb){btnSb.innerHTML='<span>✅</span> Đã gửi Telegram!';btnSb.style.background='rgba(34,197,94,0.2)';btnSb.style.borderColor='rgba(34,197,94,0.4)';btnSb.style.color='#4ade80';}
+  setTimeout(()=>{
+   if(btn){btn.disabled=false;btn.textContent='📤 Gửi Telegram';btn.style.background='';}
+   if(btnSb){btnSb.disabled=false;btnSb.innerHTML='<span>📤</span> Bắn dữ liệu lên Telegram';btnSb.style.background='';btnSb.style.borderColor='';btnSb.style.color='';}
+  },3000);
  }catch(e){
-  btn.disabled=false;btn.textContent='❌ Lỗi — Thử lại';
+  if(btn){btn.disabled=false;btn.textContent='❌ Lỗi — Thử lại';}
+  if(btnSb){btnSb.disabled=false;btnSb.innerHTML='<span>❌</span> Lỗi — Thử lại';}
   console.error('TG Error:',e);
  }
 }
