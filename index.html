@@ -385,26 +385,42 @@ function addBCSearch(el,nc){
  el.querySelectorAll('table').forEach(tbl=>{
   if(tbl.dataset.bcSrch)return;tbl.dataset.bcSrch='1';
   const rows=[...tbl.querySelectorAll('tbody tr')];
-  const names=[...new Set(rows.map(r=>(r.cells[nc]?.textContent||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+  const names=[...new Set(rows.map(r=>(r.cells[nc]?.textContent||'').trim()).filter(n=>n&&!n.toLowerCase().includes('grand total')))].sort((a,b)=>a.localeCompare(b,'vi'));
   if(!names.length)return;
-  const lid='dl'+Math.random().toString(36).slice(2,8);
+  const uid='mf'+Math.random().toString(36).slice(2,8);
+  const sel=new Set();
   const bar=document.createElement('div');
   bar.style.cssText='padding:6px 10px;background:#FFF8F5;border-bottom:1px solid #F5D0BE;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;flex-shrink:0';
-  bar.innerHTML=`<span style="font-size:13px">🔍</span><input list="${lid}" type="text" placeholder="Tìm Bưu Cục / AM..." style="border:1px solid #D1D5DB;border-radius:6px;padding:4px 9px;font-size:12px;flex:1;max-width:260px;outline:none;background:#fff"><datalist id="${lid}">${names.map(n=>`<option value="${n.replace(/&/g,'&amp;').replace(/"/g,'&quot;')}">`).join('')}</datalist><span style="font-size:11px;color:var(--text-sub);white-space:nowrap"></span><button title="Xóa bộ lọc" style="border:1px solid #E5E7EB;background:#fff;border-radius:5px;cursor:pointer;font-size:11px;color:#9CA3AF;padding:3px 8px">✕</button>`;
-  const input=bar.querySelector('input'),cntEl=bar.querySelector('span:last-of-type'),btn=bar.querySelector('button');
+  const esc=s=>s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  bar.innerHTML=`<span style="font-size:13px">🔍</span><div style="position:relative;flex:1;max-width:320px"><button id="${uid}b" style="width:100%;text-align:left;padding:4px 28px 4px 9px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;background:#fff;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Tất cả <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#9CA3AF;pointer-events:none">▾</span></button><div id="${uid}d" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:240px;background:#fff;border:1px solid #D1D5DB;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.13);z-index:200;overflow:hidden"><div style="padding:6px 8px;border-bottom:1px solid #F1F5F9;display:flex;gap:4px;align-items:center"><button id="${uid}a" style="font-size:11px;padding:2px 7px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap">Tất cả</button><button id="${uid}n" style="font-size:11px;padding:2px 7px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#fff;white-space:nowrap">Bỏ hết</button><input id="${uid}s" placeholder="Tìm nhanh..." style="flex:1;font-size:11px;padding:2px 6px;border:1px solid #E5E7EB;border-radius:4px;outline:none;min-width:0"></div><div id="${uid}l" style="max-height:220px;overflow-y:auto">${names.map(n=>`<label style="display:flex;align-items:center;gap:7px;padding:5px 10px;cursor:pointer;font-size:12px;border-bottom:1px solid #F9FAFB"><input type="checkbox" value="${esc(n)}" style="cursor:pointer;accent-color:var(--orange);flex-shrink:0"><span>${n}</span></label>`).join('')}</div></div></div><span id="${uid}c" style="font-size:11px;color:var(--text-sub);white-space:nowrap"></span><button id="${uid}x" title="Xóa bộ lọc" style="border:1px solid #E5E7EB;background:#fff;border-radius:5px;cursor:pointer;font-size:11px;color:#9CA3AF;padding:3px 8px">✕</button>`;
+  const btnEl=bar.querySelector('#'+uid+'b'),dd=bar.querySelector('#'+uid+'d');
+  const lst=bar.querySelector('#'+uid+'l'),srch=bar.querySelector('#'+uid+'s');
+  const cntEl=bar.querySelector('#'+uid+'c'),allBtn=bar.querySelector('#'+uid+'a');
+  const noneBtn=bar.querySelector('#'+uid+'n'),clrBtn=bar.querySelector('#'+uid+'x');
   const doFilter=()=>{
-   const v=input.value.trim().toLowerCase();let vis=0;
+   let vis=0;
    tbl.querySelectorAll('tbody tr').forEach(r=>{
     if(r.classList.contains('tot')||r.parentElement.tagName==='TFOOT'){r.style.display='';return;}
-    const m=!v||(r.cells[nc]?.textContent||'').toLowerCase().includes(v);
-    r.style.display=m?'':'none';if(m)vis++;
+    const name=(r.cells[nc]?.textContent||'').trim();
+    const show=sel.size===0||sel.has(name);
+    r.style.display=show?'':'none';if(show)vis++;
    });
-   cntEl.textContent=v?`${vis} kết quả`:'';
+   const total=rows.filter(r=>!r.classList.contains('tot')&&r.parentElement.tagName!=='TFOOT').length;
+   cntEl.textContent=sel.size>0?`${vis}/${total} hàng`:'';
+   const lbl=sel.size===0?'Tất cả':sel.size===1?[...sel][0]:sel.size+' đã chọn';
+   btnEl.childNodes[0].textContent=lbl+' ';
   };
-  input.addEventListener('input',doFilter);
-  btn.addEventListener('click',()=>{input.value='';doFilter();});
+  lst.querySelectorAll('input[type=checkbox]').forEach(cb=>{
+   cb.addEventListener('change',()=>{if(cb.checked)sel.add(cb.value);else sel.delete(cb.value);doFilter();});
+  });
+  btnEl.addEventListener('click',e=>{e.stopPropagation();const open=dd.style.display!=='none';dd.style.display=open?'none':'block';if(!open)srch.focus();});
+  dd.addEventListener('click',e=>e.stopPropagation());
+  document.addEventListener('click',()=>{dd.style.display='none';});
+  srch.addEventListener('input',()=>{const q=srch.value.toLowerCase();lst.querySelectorAll('label').forEach(l=>l.style.display=(l.textContent||'').toLowerCase().includes(q)?'':'none');});
+  allBtn.addEventListener('click',()=>{lst.querySelectorAll('label').forEach(l=>{if(l.style.display==='none')return;const cb=l.querySelector('input');cb.checked=true;sel.add(cb.value);});doFilter();});
+  noneBtn.addEventListener('click',()=>{lst.querySelectorAll('input[type=checkbox]').forEach(cb=>{cb.checked=false;});sel.clear();doFilter();});
+  clrBtn.addEventListener('click',()=>{lst.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);sel.clear();srch.value='';lst.querySelectorAll('label').forEach(l=>l.style.display='');doFilter();});
   tbl.parentElement.insertBefore(bar,tbl);
-  // Đẩy thead xuống dưới search bar để không bị che khi sticky
   requestAnimationFrame(()=>{const barH=bar.offsetHeight||37;let top=barH;tbl.querySelectorAll('thead tr').forEach(tr=>{tr.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=top+'px';});top+=tr.offsetHeight||34;});});
  });
 }
