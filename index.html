@@ -1286,44 +1286,97 @@ async function sendAgingToTelegram(){
   const bcArr=Object.values(bcMap).filter(r=>!unstableBCSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
   const stableCur=bcArr.reduce((s,r)=>s+(r[latest]||0),0),stablePrv=bcArr.reduce((s,r)=>s+(r[prev]||0),0);
 
-  const deltaIcon=delta<0?'📉':'📈';
-  const deltaStr=delta<0?`▼ ${num(Math.abs(delta))} đơn`:delta>0?`▲ ${num(delta)} đơn`:'Không đổi';
+  // helpers căn cột
+  const pad=(s,n)=>{s=String(s);return s.length>=n?s.slice(0,n):s+' '.repeat(n-s.length);};
+  const rpad=(s,n)=>{s=String(s);return s.length>=n?s.slice(0,n):' '.repeat(n-s.length)+s;};
+  const trd=(c,p)=>c<p?`▼${num(p-c)}`:c>p?`▲${num(c-p)}`:'—';
+  const d2=delta<0?`▼${num(Math.abs(delta))}`:delta>0?`▲${num(delta)}`:'—';
 
   // ══ MSG 1: TỔNG QUAN ══
-  const msg1=`📊 <b>BÁO CÁO AGING XBG — ${fmt(latest)}</b>
+  const pctBatOn=latestTotal>0?(unstableCur/latestTotal*100).toFixed(1):0;
+  const pctOk=latestTotal>0?((latestTotal-unstableCur)/latestTotal*100).toFixed(1):0;
+  let msg1=`📊 <b>BÁO CÁO AGING XBG — ${fmt(latest)}</b>\n\n`;
+  msg1+=`<pre>`;
+  msg1+=`Chỉ số           Hôm nay      N-1\n`;
+  msg1+=`──────────────────────────────────\n`;
+  msg1+=`Tổng Aging      ${rpad(num(latestTotal),8)} ${rpad(num(prevTotal),8)}\n`;
+  msg1+=`Thay đổi        ${rpad(d2,17)}\n`;
+  msg1+=`BC Bất Ổn       ${rpad(num(unstableCur),8)} ${rpad(num(unstablePrv),8)}\n`;
+  msg1+=`BC Ổn Định      ${rpad(num(latestTotal-unstableCur),8)} ${rpad(num(prevTotal-unstablePrv),8)}\n`;
+  msg1+=`──────────────────────────────────</pre>\n\n`;
+  msg1+=`📝 <i>`;
+  msg1+=delta<0?`Tổng aging <b>giảm ${num(Math.abs(delta))} đơn</b> so với hôm qua — tín hiệu tích cực.`:
+        delta>0?`Tổng aging <b>tăng ${num(delta)} đơn</b> so với hôm qua — cần theo dõi sát.`:
+        `Tổng aging không đổi so với hôm qua.`;
+  msg1+=` BC bất ổn chiếm <b>${pctBatOn}%</b>, BC ổn định chiếm <b>${pctOk}%</b> tổng aging.`;
+  const topAM1=amArr[0];if(topAM1)msg1+=` AM có aging cao nhất: <b>${topAM1.am}</b> (${num(topAM1[latest]||0)} đơn).`;
+  msg1+=`</i>`;
 
-📦 <b>Tổng Aging hôm nay:</b> ${num(latestTotal)} đơn
-📅 <b>N-1 (${fmt(prev)}):</b> ${num(prevTotal)} đơn
-${deltaIcon} <b>Tăng/Giảm:</b> ${deltaStr}
-⚠️ <b>BC Bất Ổn:</b> ${num(unstableCur)} đơn (${unstableArr.length} bưu cục)
-✅ <b>BC Ổn Định:</b> ${num(latestTotal-unstableCur)} đơn
+  // ══ MSG 2: THEO AM ══
+  const amTangNhat=amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a,amArr[0]);
+  const amGiamNhat=amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))<((a[latest]||0)-(a[prev]||0))?b:a,amArr[0]);
+  let msg2=`👤 <b>THEO AM — 7 NGÀY GẦN NHẤT</b> (${amArr.length} AM)\n\n`;
+  msg2+=`<pre>`;
+  msg2+=` #  AM                    HN    N-1   Δ\n`;
+  msg2+=`──────────────────────────────────────\n`;
+  amArr.forEach((r,i)=>{
+   const c=r[latest]||0,p=r[prev]||0;
+   msg2+=`${rpad(i+1,2)}  ${pad(r.am,19)} ${rpad(num(c),5)} ${rpad(num(p),5)}  ${trd(c,p)}\n`;
+  });
+  msg2+=`──────────────────────────────────────\n`;
+  msg2+=`    ${pad('TỔNG',19)} ${rpad(num(amCur),5)} ${rpad(num(amPrv),5)}  ${trd(amCur,amPrv)}\n`;
+  msg2+=`</pre>\n\n`;
+  msg2+=`📝 <i>`;
+  if(amTangNhat){const d=(amTangNhat[latest]||0)-(amTangNhat[prev]||0);if(d>0)msg2+=`AM tăng mạnh nhất: <b>${amTangNhat.am}</b> (+${num(d)} đơn). `;}
+  if(amGiamNhat){const d=(amGiamNhat[latest]||0)-(amGiamNhat[prev]||0);if(d<0)msg2+=`AM giảm mạnh nhất: <b>${amGiamNhat.am}</b> (${num(d)} đơn). `;}
+  msg2+=`Top 3 AM nhiều aging nhất: ${amArr.slice(0,3).map(r=>`<b>${r.am}</b> ${num(r[latest]||0)}`).join(', ')}.`;
+  msg2+=`</i>`;
 
-📝 <i>Tổng Aging ${fmt(latest)}: ${num(latestTotal)} đơn · N-1: ${num(prevTotal)} đơn · ${deltaStr}
-BC bất ổn: ${num(unstableCur)} đơn (${trend(unstableCur,unstablePrv)}) · BC ổn định: ${num(latestTotal-unstableCur)} đơn (${trend(latestTotal-unstableCur,prevTotal-unstablePrv)})</i>`;
-
-  // ══ MSG 2: BC BẤT ỔN ══
-  let msg2=`⚠️ <b>BƯU CỤC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n\n`;
-  unstableArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg2+=`${i+1}. <b>${r.bc}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
-  msg2+=`\n<b>TỔNG: ${num(unstableCur)} đơn ${trend(unstableCur,unstablePrv)}</b>`;
-  msg2+=`\n\n📝 <i>BC Bất Ổn ${fmt(latest)}: ${num(unstableCur)} đơn · ${trend(unstableCur,unstablePrv)} so với ${fmt(prev)}</i>`;
-
-  // ══ MSG 3: THEO AM ══
-  let msg3=`👤 <b>THEO AM — 7 NGÀY GẦN NHẤT</b> (${amArr.length} AM)\n\n`;
-  amArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg3+=`${i+1}. <b>${r.am}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
-  msg3+=`\n<b>TỔNG: ${num(amCur)} đơn ${trend(amCur,amPrv)}</b>`;
-  const top5am=amArr.slice(0,5).map(r=>`${r.am} ${num(r[latest]||0)} đơn`).join(' · ');
-  msg3+=`\n\n📝 <i>Top 5 AM: ${top5am}</i>`;
+  // ══ MSG 3: BC BẤT ỔN ══
+  const bcTangNhat=unstableArr.length>1?unstableArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a,unstableArr[0]):unstableArr[0];
+  let msg3=`⚠️ <b>BƯU CỤC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n\n`;
+  msg3+=`<pre>`;
+  msg3+=` #  Bưu Cục              HN    N-1   Δ\n`;
+  msg3+=`──────────────────────────────────────\n`;
+  unstableArr.forEach((r,i)=>{
+   const c=r[latest]||0,p=r[prev]||0;
+   msg3+=`${rpad(i+1,2)}  ${pad(r.bc,18)} ${rpad(num(c),5)} ${rpad(num(p),5)}  ${trd(c,p)}\n`;
+  });
+  msg3+=`──────────────────────────────────────\n`;
+  msg3+=`    ${pad('TỔNG',18)} ${rpad(num(unstableCur),5)} ${rpad(num(unstablePrv),5)}  ${trd(unstableCur,unstablePrv)}\n`;
+  msg3+=`</pre>\n\n`;
+  msg3+=`📝 <i>`;
+  const topBC3=unstableArr.slice(0,1)[0];
+  if(topBC3)msg3+=`BC bất ổn nặng nhất: <b>${topBC3.bc}</b> (${num(topBC3[latest]||0)} đơn). `;
+  msg3+=unstableCur<unstablePrv?`Tổng BC bất ổn <b>giảm ${num(unstablePrv-unstableCur)} đơn</b> so với hôm qua.`:
+        unstableCur>unstablePrv?`Tổng BC bất ổn <b>tăng ${num(unstableCur-unstablePrv)} đơn</b> so với hôm qua — cần theo dõi.`:
+        `Tổng BC bất ổn không đổi so với hôm qua.`;
+  msg3+=`</i>`;
 
   // ══ MSG 4: THEO BƯU CỤC ══
+  const bcStableTop=bcArr[0];
   let msg4=`🏪 <b>THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b> (${bcArr.length} BC ổn định)\n\n`;
-  bcArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg4+=`${i+1}. <b>${r.bc}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
-  msg4+=`\n<b>TỔNG: ${num(stableCur)} đơn ${trend(stableCur,stablePrv)}</b>`;
-  const top5bc=bcArr.slice(0,5).map(r=>`${r.bc} ${num(r[latest]||0)} đơn`).join(' · ');
-  msg4+=`\n\n📝 <i>Top 5 BC ổn định: ${top5bc}</i>`;
+  msg4+=`<pre>`;
+  msg4+=` #  Bưu Cục              HN    N-1   Δ\n`;
+  msg4+=`──────────────────────────────────────\n`;
+  bcArr.forEach((r,i)=>{
+   const c=r[latest]||0,p=r[prev]||0;
+   msg4+=`${rpad(i+1,2)}  ${pad(r.bc,18)} ${rpad(num(c),5)} ${rpad(num(p),5)}  ${trd(c,p)}\n`;
+  });
+  msg4+=`──────────────────────────────────────\n`;
+  msg4+=`    ${pad('TỔNG',18)} ${rpad(num(stableCur),5)} ${rpad(num(stablePrv),5)}  ${trd(stableCur,stablePrv)}\n`;
+  msg4+=`</pre>\n\n`;
+  msg4+=`📝 <i>`;
+  if(bcStableTop)msg4+=`BC ổn định có aging cao nhất: <b>${bcStableTop.bc}</b> (${num(bcStableTop[latest]||0)} đơn). `;
+  msg4+=stableCur<stablePrv?`Nhóm BC ổn định <b>giảm ${num(stablePrv-stableCur)} đơn</b> so với hôm qua.`:
+        stableCur>stablePrv?`Nhóm BC ổn định <b>tăng ${num(stableCur-stablePrv)} đơn</b> so với hôm qua.`:
+        `Nhóm BC ổn định không đổi so với hôm qua.`;
+  msg4+=`</i>`;
 
   // ── Gửi lần lượt ──
   // Telegram giới hạn 4096 ký tự/tin — cắt nếu cần
   const trim=(s)=>s.length>4000?s.slice(0,3990)+'...\n<i>(Danh sách đã cắt bớt)</i>':s;
+  // Thứ tự: Tổng quan → Theo AM → BC Bất Ổn → Theo BC
   await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg1));
   await new Promise(r=>setTimeout(r,500));
   await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg2));
