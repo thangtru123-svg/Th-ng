@@ -240,6 +240,11 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 const AUTH_CLIENT_ID   = '307904146149-7kg0dkc0rbcm5vdjfe1ltnvrlg3mv1uv.apps.googleusercontent.com';
 const WHITELIST_SHEET_ID = '1w4Ufjf6_P46bfK5LxW0ORqUhr__q1ghNqfGZ3_w6KQ0';
 
+/* ===== TELEGRAM CONFIG ===== */
+const TG_TOKEN   = '7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
+const TG_AGING_CHAT   = -1003802272887;
+const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
+
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
 
@@ -1148,7 +1153,7 @@ function buildAgingHTML(rows){
  const latestTotal=byDate[latest]||0;const prevTotal=byDate[prev]||0;const delta=latestTotal-prevTotal;
  const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
  const deltaSign=delta>0?'+':'';const deltaIcon=delta<0?'▼':delta>0?'▲':'—';const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
- let h=`<div class="page-header"><div class="page-title">Tổng quan Aging &gt; 5 Ngày</div><div class="page-meta"><span class="tag tag-orange">⏳ 7 ngày gần nhất · Nguồn: Google Sheet Aging</span></div></div>`;
+ let h=`<div class="page-header"><div class="page-title">Tổng quan Aging &gt; 5 Ngày</div><div class="page-meta"><span class="tag tag-orange">⏳ 7 ngày gần nhất · Nguồn: Google Sheet Aging</span><button id="tgAgingBtn" onclick="sendAgingToTelegram()" style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-left:10px">📤 Gửi Telegram</button></div></div>`;
  const stableLatest=latestTotal-unstableLatest;
  h+=`<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px">`;
  [{icon:'📦',label:'Tổng Aging hôm nay',val:latestTotal.toLocaleString(),sub:agingFmtDate(latest),color:'var(--orange)'},
@@ -1225,6 +1230,109 @@ async function buildAgingPage(){
   el.innerHTML=buildAgingHTML(rows);
   addBCSearch(el);
  }catch(e){el.innerHTML=errPage(`Aging sheet: ${e.message}`);}
+}
+
+/* ===== TELEGRAM — GỬI AGING ===== */
+async function _tgSend(chatId,threadId,text){
+ const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
+  method:'POST',headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true})
+ });
+ return r.json();
+}
+
+async function sendAgingToTelegram(){
+ const rows=window._agingRows;
+ if(!rows||!rows.length){alert('Chưa có dữ liệu Aging! Vui lòng chờ trang tải xong.');return;}
+
+ const btn=document.getElementById('tgAgingBtn');
+ btn.disabled=true;btn.textContent='⏳ Đang gửi...';
+
+ try{
+  // ── Tính dữ liệu ──
+  const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
+  const last7=allDates.slice(-7);
+  const latest=last7[last7.length-1];
+  const prev=last7[last7.length-2];
+  const recent=rows.filter(r=>last7.includes(r[11]));
+  const fmt=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+  const num=n=>n.toLocaleString('vi-VN');
+  const trend=(c,p)=>c<p?`▼${num(p-c)}`:c>p?`▲${num(c-p)}`:'—';
+
+  // byDate total (loại #N/A)
+  const byDate={};recent.forEach(r=>{const am=(r[10]||'').trim();if(am&&(am==='#N/A'||am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
+  const latestTotal=byDate[latest]||0,prevTotal=byDate[prev]||0,delta=latestTotal-prevTotal;
+
+  // unstable
+  const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
+  const unstableBCSet=new Set(unstableRows.map(r=>r[2]));
+  const unstableMap={};unstableRows.forEach(r=>{const bc=r[2],d=r[11];if(!unstableMap[bc])unstableMap[bc]={bc};unstableMap[bc][d]=(unstableMap[bc][d]||0)+1;});
+  const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+  const unstableCur=unstableArr.reduce((s,r)=>s+(r[latest]||0),0);
+  const unstablePrv=unstableArr.reduce((s,r)=>s+(r[prev]||0),0);
+
+  // AM
+  const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0),amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
+
+  // BC ổn định
+  const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
+  const bcArr=Object.values(bcMap).filter(r=>!unstableBCSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+  const stableCur=bcArr.reduce((s,r)=>s+(r[latest]||0),0),stablePrv=bcArr.reduce((s,r)=>s+(r[prev]||0),0);
+
+  const deltaIcon=delta<0?'📉':'📈';
+  const deltaStr=delta<0?`▼ ${num(Math.abs(delta))} đơn`:delta>0?`▲ ${num(delta)} đơn`:'Không đổi';
+
+  // ══ MSG 1: TỔNG QUAN ══
+  const msg1=`📊 <b>BÁO CÁO AGING XBG — ${fmt(latest)}</b>
+
+📦 <b>Tổng Aging hôm nay:</b> ${num(latestTotal)} đơn
+📅 <b>N-1 (${fmt(prev)}):</b> ${num(prevTotal)} đơn
+${deltaIcon} <b>Tăng/Giảm:</b> ${deltaStr}
+⚠️ <b>BC Bất Ổn:</b> ${num(unstableCur)} đơn (${unstableArr.length} bưu cục)
+✅ <b>BC Ổn Định:</b> ${num(latestTotal-unstableCur)} đơn
+
+📝 <i>Tổng Aging ${fmt(latest)}: ${num(latestTotal)} đơn · N-1: ${num(prevTotal)} đơn · ${deltaStr}
+BC bất ổn: ${num(unstableCur)} đơn (${trend(unstableCur,unstablePrv)}) · BC ổn định: ${num(latestTotal-unstableCur)} đơn (${trend(latestTotal-unstableCur,prevTotal-unstablePrv)})</i>`;
+
+  // ══ MSG 2: BC BẤT ỔN ══
+  let msg2=`⚠️ <b>BƯU CỤC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n\n`;
+  unstableArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg2+=`${i+1}. <b>${r.bc}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
+  msg2+=`\n<b>TỔNG: ${num(unstableCur)} đơn ${trend(unstableCur,unstablePrv)}</b>`;
+  msg2+=`\n\n📝 <i>BC Bất Ổn ${fmt(latest)}: ${num(unstableCur)} đơn · ${trend(unstableCur,unstablePrv)} so với ${fmt(prev)}</i>`;
+
+  // ══ MSG 3: THEO AM ══
+  let msg3=`👤 <b>THEO AM — 7 NGÀY GẦN NHẤT</b> (${amArr.length} AM)\n\n`;
+  amArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg3+=`${i+1}. <b>${r.am}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
+  msg3+=`\n<b>TỔNG: ${num(amCur)} đơn ${trend(amCur,amPrv)}</b>`;
+  const top5am=amArr.slice(0,5).map(r=>`${r.am} ${num(r[latest]||0)} đơn`).join(' · ');
+  msg3+=`\n\n📝 <i>Top 5 AM: ${top5am}</i>`;
+
+  // ══ MSG 4: THEO BƯU CỤC ══
+  let msg4=`🏪 <b>THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b> (${bcArr.length} BC ổn định)\n\n`;
+  bcArr.forEach((r,i)=>{const c=r[latest]||0,p=r[prev]||0;msg4+=`${i+1}. <b>${r.bc}</b>: ${num(c)} đơn ${trend(c,p)}\n`;});
+  msg4+=`\n<b>TỔNG: ${num(stableCur)} đơn ${trend(stableCur,stablePrv)}</b>`;
+  const top5bc=bcArr.slice(0,5).map(r=>`${r.bc} ${num(r[latest]||0)} đơn`).join(' · ');
+  msg4+=`\n\n📝 <i>Top 5 BC ổn định: ${top5bc}</i>`;
+
+  // ── Gửi lần lượt ──
+  // Telegram giới hạn 4096 ký tự/tin — cắt nếu cần
+  const trim=(s)=>s.length>4000?s.slice(0,3990)+'...\n<i>(Danh sách đã cắt bớt)</i>':s;
+  await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg1));
+  await new Promise(r=>setTimeout(r,500));
+  await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg2));
+  await new Promise(r=>setTimeout(r,500));
+  await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg3));
+  await new Promise(r=>setTimeout(r,500));
+  await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,trim(msg4));
+
+  btn.textContent='✅ Đã gửi Telegram!';btn.style.background='#22C55E';
+  setTimeout(()=>{btn.disabled=false;btn.textContent='📤 Gửi Telegram';btn.style.background='';},3000);
+ }catch(e){
+  btn.disabled=false;btn.textContent='❌ Lỗi — Thử lại';
+  console.error('TG Error:',e);
+ }
 }
 
 /* ===== AI PAGE ===== */
