@@ -214,6 +214,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p7',this)"><span class="icon">⏳</span>Aging &gt; 5 ngày</button>
  <div class="nav-section">Vận Hành Ngày</div>
  <button class="nav-item" onclick="show('p16',this)"><span class="icon">📋</span>Báo Cáo Vận Hành Ngày</button>
+ <button class="nav-item" onclick="show('p17',this)"><span class="icon">📅</span>Báo Cáo Vận Hành Tuần</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -236,6 +237,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p12"></div>
  <div class="page" id="p16"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p17"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -1665,6 +1667,225 @@ async function runAIAnalysis(){
 }
 function copyAIResult(){if(window._lastAIResult)navigator.clipboard.writeText(window._lastAIResult).then(()=>{const s=document.getElementById('aiStatus');s.textContent='✅ Đã copy!';setTimeout(()=>s.textContent='',2000);});}
 
+/* ===== DASHBOARD 10: BÁO CÁO VẬN HÀNH TUẦN (p17) ===== */
+function buildWeeklyReport(){
+ const p=document.getElementById('p17');if(!p)return;
+ function getW(ds){const d=new Date(ds+'T00:00:00');if(isNaN(d))return null;d.setDate(d.getDate()+4-(d.getDay()||7));const y=d.getFullYear();return `${y}-W${String(Math.ceil((((d-new Date(y,0,1))/864e5)+1)/7)).padStart(2,'0')}`;}
+ function wLabel(wk){const p=wk.split('-W');return p[1]?`Tuần ${+p[1]}`:wk;}
+ const src=window._D?.gtcTotalAM;
+ if(!src||src.length<2){p.innerHTML='<div style="padding:24px;color:var(--text-sub)">Chưa có dữ liệu GTC để tính tuần</div>';return;}
+ const wkSet={};src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w)wkSet[w]=true;}});
+ const weeks=Object.keys(wkSet).sort();
+ if(weeks.length<2){p.innerHTML='<div style="padding:24px;color:var(--text-sub)">Cần ít nhất 2 tuần dữ liệu</div>';return;}
+ const wA=weeks[weeks.length-2],wB=weeks[weeks.length-1];
+ const wALabel=wLabel(wA),wBLabel=wLabel(wB);
+ const datesA=new Set(),datesB=new Set();
+ src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w===wA)datesA.add(d);if(w===wB)datesB.add(d);}});
+ // Cũng build dateSet từ các nguồn khác để phủ đủ
+ const buildDS=(rows,dcol)=>{const a=new Set(),b=new Set();(rows||[]).slice(1).forEach(r=>{const d=isoD(r[dcol]);if(d){const w=getW(d);if(w===wA)a.add(d);if(w===wB)b.add(d);}});return{a,b};};
+ const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
+ const p0=(vol,cnt)=>vol>0?cnt/vol*100:0;
+ const num=n=>(+n||0).toLocaleString('vi-VN');
+ const gc=v=>v>=65?'g':v>=50?'m':'b';
+ const gco=v=>v>=90?'g':v>=80?'m':'b';
+ const gcfd=v=>v<10?'g':v<15?'m':'b';
+ const cs='padding:7px 10px;';
+
+ /* ── Bảng 1: GTC Total Vùng Ca1/Ca2/Hàng Tồn ── */
+ function bld1(){
+  const ca12=window._DAILY_RAW?.ca12;if(!ca12)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ca12</p>';
+  const {a:dA,b:dB}=buildDS(ca12,2);
+  function agg(ds){const m={};ca12.slice(1).filter(r=>isGrand(r)&&ds.has(isoD(r[2]))).forEach(r=>{const l=(r[1]||'').trim();if(!l)return;if(!m[l])m[l]={v:0,n:0};m[l].v+=Math.round(parseFloat(r[3])||0);m[l].n+=Math.round(parseFloat(r[6])||0);});Object.values(m).forEach(x=>x.g=p0(x.v,x.n));return m;}
+  const a=agg(dA),b=agg(dB);
+  const loais=[...new Set([...Object.keys(a),...Object.keys(b)])].filter(x=>x).sort();
+  const tA={v:0,n:0},tB={v:0,n:0};
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">Loại</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel}</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
+  </tr><tr><th></th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
+  </tr></thead><tbody>`;
+  loais.forEach(l=>{const av=a[l]||{v:0,n:0,g:0},bv=b[l]||{v:0,n:0,g:0};tA.v+=av.v;tA.n+=av.n;tB.v+=bv.v;tB.n+=bv.n;const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+   h+=`<tr><td style="${cs}font-weight:600">${l}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+  const tAg=p0(tA.v,tA.n),tBg=p0(tB.v,tB.n),td=tBg-tAg,tdc=td>=0?'var(--green)':'var(--red)';
+  h+=`<tr class="tot"><td style="${cs}">Tổng</td>
+   <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tA.v)}</td><td style="${cs}text-align:right">${num(tA.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tAg)}">${tAg.toFixed(1)}%</span></td>
+   <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tB.v)}</td><td style="${cs}text-align:right">${num(tB.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tBg)}">${tBg.toFixed(1)}%</span></td>
+   <td style="${cs}text-align:center;font-weight:700;color:${tdc};border-left:2px solid #F3F4F6">${td>=0?'+':''}${td.toFixed(1)}%</td></tr>`;
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 2: GTC theo AM ── */
+ function bld2(){
+  const rows=window._D?.gtcTotalAM;if(!rows)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[1]))).forEach(r=>{const n=(r[0]||'').trim();if(!n)return;if(!m[n])m[n]={v:0,nG:0};m[n].v+=Math.round(parseFloat(r[2])||0);m[n].nG+=Math.round(parseFloat(r[5])||0);});Object.values(m).forEach(x=>x.g=p0(x.v,x.nG));return m;}
+  const a=agg(datesA),b=agg(datesB);
+  const names=[...new Set([...Object.keys(a),...Object.keys(b)])].sort((x,y)=>(b[x]?.g??999)-(b[y]?.g??999));
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">AM</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel}</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
+  </tr><tr><th></th><th></th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
+  </tr></thead><tbody>`;
+  names.forEach((n,i)=>{const av=a[n]||{v:0,nG:0,g:0},bv=b[n]||{v:0,nG:0,g:0};const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 3: Top 20 BC GTC tệ nhất T26 ── */
+ function bld3(){
+  const rows=window._D?.gtcTotalBC;if(!rows)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[2]))).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[0]||'').trim();if(!bc)return;if(!m[bc])m[bc]={v:0,nG:0,am};m[bc].v+=Math.round(parseFloat(r[3])||0);m[bc].nG+=Math.round(parseFloat(r[6])||0);});Object.values(m).forEach(x=>x.g=p0(x.v,x.nG));return m;}
+  const a=agg(datesA),b=agg(datesB);
+  const top20=[...new Set([...Object.keys(a),...Object.keys(b)])].filter(bc=>b[bc]&&b[bc].v>0).sort((x,y)=>(b[x]?.g??999)-(b[y]?.g??999)).slice(0,20);
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">Bưu Cục</th><th style="${cs}">AM</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel}</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
+  </tr><tr><th></th><th></th><th></th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
+  </tr></thead><tbody>`;
+  top20.forEach((bc,i)=>{const av=a[bc]||{v:0,nG:0,g:0},bv=b[bc]||{v:0,nG:0,g:0};const amN=bv.am||av.am||'';const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 4 & 5: TLT theo AM/BC ── */
+ function bldTlt(rows,nameCol,fdCol,dateCol){
+  if(!rows)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const {a:dA,b:dB}=buildDS(rows,dateCol);
+  function agg(ds){const m={},c={};rows.slice(1).forEach(r=>{const d=isoD(r[dateCol]);if(!d||!ds.has(d))return;const n=(r[nameCol]||'').trim();if(!n||n.toLowerCase().includes('grand'))return;const fd=parsePct(r[fdCol]);if(!m[n]){m[n]=0;c[n]=0;}m[n]+=fd;c[n]++;});const res={};Object.keys(m).forEach(n=>res[n]=c[n]>0?m[n]/c[n]:0);return res;}
+  const a=agg(dA),b=agg(dB);
+  const names=[...new Set([...Object.keys(a),...Object.keys(b)])].sort((x,y)=>(b[y]??0)-(b[x]??0));
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">Tên</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel} %FD</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel} %FD</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %FD</th>
+  </tr></thead><tbody>`;
+  names.forEach((n,i)=>{const av=a[n]??null,bv=b[n]??null;const d=(av!==null&&bv!==null)?bv-av:null;const dc=d!==null?(d<=0?'var(--green)':'var(--red)'):'var(--text-sub)';
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${av!==null?`<span class="pct ${gcfd(av)}">${av.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${bv!==null?`<span class="pct ${gcfd(bv)}">${bv.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d!==null?((d<=0?'':'+')+(d.toFixed(1))+'%'):'—'}</td></tr>`;});
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 6: Aging theo AM 7 ngày gần nhất ── */
+ function bld6(){
+  const rows=window._agingRows;if(!rows||!rows.length)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu Aging</p>';
+  const allDts=[...new Set(rows.map(r=>{const v=(r[11]||'').toString();return v.match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const dates=allDts.slice(0,7);if(!dates.length)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const pivot={};
+  rows.forEach(r=>{const am=(r[10]||'').trim();const d=(r[11]||'').toString().match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';if(!am||!dates.includes(d))return;if(!pivot[am])pivot[am]={};pivot[am][d]=(pivot[am][d]||0)+1;});
+  const latest=dates[0];const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]||0)-(pivot[a][latest]||0));
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">AM</th>
+   ${dates.map(d=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
+  </tr></thead><tbody>`;
+  names.forEach((am,i)=>{
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${am}</td>`;
+   dates.forEach(d=>{const v=pivot[am]?.[d];h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:600;color:${v?'var(--red)':'var(--text-sub)'}">${v||0}</td>`;});
+   h+='</tr>';});
+  h+=`<tr class="tot"><td colspan="2" style="${cs}">Tổng</td>`;
+  dates.forEach(d=>{const t=Object.values(pivot).reduce((s,r)=>s+(r[d]||0),0);h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:var(--orange)">${t}</td>`;});
+  h+='</tr>';
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 7 & 9: Ontime theo AM ── */
+ function bldOntAM(rows){
+  if(!rows||rows.length<2)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const {a:dA,b:dB}=buildDS(rows,1);
+  function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[1]))).forEach(r=>{const n=(r[0]||'').trim();if(!n)return;if(!m[n])m[n]={v:0,c:0};m[n].v+=Math.round(parseFloat(r[2])||0);m[n].c+=Math.round(parseFloat(r[4])||0);});Object.values(m).forEach(x=>x.pct=p0(x.v,x.c));return m;}
+  const a=agg(dA),b=agg(dB);
+  const names=[...new Set([...Object.keys(a),...Object.keys(b)])].sort((x,y)=>(a[x]?.pct??0)-(a[y]?.pct??0));
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">AM</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel}</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %Ontime</th>
+  </tr><tr><th></th><th></th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
+  </tr></thead><tbody>`;
+  names.forEach((n,i)=>{const av=a[n]||{v:0,c:0,pct:0},bv=b[n]||{v:0,c:0,pct:0};const d=bv.pct-av.pct,dc=d>=0?'var(--green)':'var(--red)';
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+  return h+'</tbody></table></div>';
+ }
+
+ /* ── Bảng 8, 10, 11: Ontime theo BC ── */
+ function bldOntBC(rows,filterLow=false,limit=50){
+  if(!rows||rows.length<2)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  const {a:dA,b:dB}=buildDS(rows,2);
+  function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[2]))).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[0]||'').trim();if(!bc)return;if(!m[bc])m[bc]={v:0,c:0,am};m[bc].v+=Math.round(parseFloat(r[3])||0);m[bc].c+=Math.round(parseFloat(r[5])||0);});Object.values(m).forEach(x=>x.pct=p0(x.v,x.c));return m;}
+  const a=agg(dA),b=agg(dB);
+  let names=[...new Set([...Object.keys(a),...Object.keys(b)])];
+  if(filterLow){names=names.filter(bc=>b[bc]&&b[bc].pct<80&&b[bc].v>0).sort((x,y)=>(b[y]?.v||0)-(b[x]?.v||0)).slice(0,limit);}
+  else{names=names.sort((x,y)=>(a[x]?.pct??0)-(a[y]?.pct??0));}
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+   <th style="${cs}">STT</th><th style="${cs}">Bưu Cục</th><th style="${cs}">AM</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel}</th>
+   <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %Ontime</th>
+  </tr><tr><th></th><th></th><th></th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
+  </tr></thead><tbody>`;
+  names.forEach((bc,i)=>{const av=a[bc]||{v:0,c:0,pct:0,am:''},bv=b[bc]||{v:0,c:0,pct:0,am:''};const amN=bv.am||av.am||'';const d=bv.pct-av.pct,dc=d>=0?'var(--green)':'var(--red)';
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center">${bv.v>0?`<span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+  return h+'</tbody></table></div>';
+ }
+
+ function card(title,icon,content,info=''){return`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">${icon}</div>${title}</div>${info?`<div class="card-info">${info}</div>`:''}</div>${content}</div>`;}
+
+ p.innerHTML=`
+  <div class="page-header">
+   <div class="page-title">📅 Báo Cáo Vận Hành Tuần</div>
+   <div class="page-meta"><span class="tag tag-orange">📊 So sánh ${wALabel} vs ${wBLabel}</span></div>
+  </div>
+  ${card(`Bảng 1 — GTC Total Vùng: Ca 1 / Ca 2 / Hàng Tồn`,'📦',bld1(),`So sánh ${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 2 — GTC theo AM`,'👤',bld2(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
+  ${card(`Bảng 3 — Top 20 BC GTC tệ nhất ${wBLabel}`,'🏪',bld3(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
+  ${card(`Bảng 4 — Tỉ Lệ Trả (TLT) theo AM`,'👤',bldTlt(window._FD?.totalAM,0,3,1),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
+  ${card(`Bảng 5 — Tỉ Lệ Trả (TLT) theo Bưu Cục`,'🏪',bldTlt(window._FD?.totalBC,0,3,1),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
+  ${card(`Bảng 6 — Aging > 5 ngày theo AM (7 ngày gần nhất)`,'⏳',bld6(),'')}
+  ${card(`Bảng 7 — Ontime Giao TTS (ODR) theo AM`,'👤',bldOntAM(window._D?.odrAM),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 8 — Ontime Giao TTS (ODR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.odrBC),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 9 — Ontime Lấy TTS (OPR) theo AM`,'👤',bldOntAM(window._D?.oprAM),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 10 — Ontime Lấy TTS (OPR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.oprBC),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 11 — BC Vol LTC cao, Ontime OPR < 80%`,'⚠️',bldOntBC(window._D?.oprBC,true,50),`Lọc: ${wBLabel} OPR < 80% · Sắp xếp: Vol LTC ${wBLabel} cao → thấp`)}
+ `;
+}
+
 /* ===== DASHBOARD 9: BÁO CÁO VẬN HÀNH NGÀY (p16) ===== */
 // GTC ca 1,2: col[0]=AM, col[1]=Loại hàng, col[2]=Ngày, col[3]=Vol, col[4]=%Gán, col[5]=%GTC, col[6]=Số đơn GTC
 // LTC - AM:   col[0]=AM (' '=Grand Total), col[1]=Ngày, col[2]=Vol, col[3]=%Gán, col[4]=Số đơn LTC
@@ -2077,6 +2298,8 @@ async function init(){
   p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM'],R['OPR TTS - AM'],null);
   addBCSearch(p16el);
  }else p16el.innerHTML=errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
+ // p17 — Báo Cáo Vận Hành Tuần
+ buildWeeklyReport();
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
  btn.classList.remove('spinning');btn.disabled=false;
@@ -2085,7 +2308,7 @@ async function init(){
 
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
- ['p0','p1','p2','p3','p4','p5','p6','p7','p16'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p0','p1','p2','p3','p4','p5','p6','p7','p16','p17'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  ['gtc','aging','ontime'].forEach(id=>destroyChart(id));
  await init();
 };
