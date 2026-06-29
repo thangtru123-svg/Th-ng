@@ -219,7 +219,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
- <button class="refresh-btn" id="tgSidebarBtn" onclick="sendAgingToTelegram()" style="background:rgba(33,150,243,0.15);border-color:rgba(33,150,243,0.35);color:#42a5f5;margin-top:4px">
+ <button class="refresh-btn" id="tgSidebarBtn" onclick="sendAllToTelegram()" style="background:rgba(33,150,243,0.15);border-color:rgba(33,150,243,0.35);color:#42a5f5;margin-top:4px">
   <span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram
  </button>
  <div class="last-update" id="lastUpdate"></div>
@@ -248,6 +248,7 @@ const TG_TOKEN   = '7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
 const TG_AGING_CHAT   = -1003802272887;
 const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
 const TG_VH_THREAD   = 5; // topic "Vận hành chung"
+const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
@@ -446,7 +447,7 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
  const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">${title}</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span>${pid==='p1'?`<button onclick="sendGTCTotalToTelegram()" style="display:inline-block;background:#229ED9;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">📤 Gửi Telegram</button>`:''}</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span></div>
  </div>
  <div class="date-filter-bar">
   <label>Từ ngày:</label>
@@ -541,8 +542,8 @@ function buildFDDayPage(fd){
   <label>Đến ngày:</label>
   <select id="fdDay_dTo" onchange="renderFDDay()">${mkOpts(dTo)}</select>
  </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>A. Theo AM</div></div><div id="fdDayAMTable"></div></div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdDayBCTable"></div></div>`;
+ <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>A. Theo AM</div></div><div id="fdDayAMTable"></div></div>
+ <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdDayBCTable"></div></div>`;
 }
 function renderFDDay(){
  const fd=window._FD;if(!fd.totalAM)return;
@@ -1157,7 +1158,7 @@ function buildAgingHTML(rows){
  const latestTotal=byDate[latest]||0;const prevTotal=byDate[prev]||0;const delta=latestTotal-prevTotal;
  const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
  const deltaSign=delta>0?'+':'';const deltaIcon=delta<0?'▼':delta>0?'▲':'—';const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
- let h=`<div class="page-header"><div class="page-title">Tổng quan Aging &gt; 5 Ngày</div><div class="page-meta"><span class="tag tag-orange">⏳ 7 ngày gần nhất · Nguồn: Google Sheet Aging</span><button id="tgAgingBtn" onclick="sendAgingToTelegram()" style="background:var(--orange);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;margin-left:10px">📤 Gửi Telegram</button></div></div>`;
+ let h=`<div class="page-header"><div class="page-title">Tổng quan Aging &gt; 5 Ngày</div><div class="page-meta"><span class="tag tag-orange">⏳ 7 ngày gần nhất · Nguồn: Google Sheet Aging</span></div></div>`;
  const stableLatest=latestTotal-unstableLatest;
  h+=`<div id="aging-cards" style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:22px">`;
  [{icon:'📦',label:'Tổng Aging hôm nay',val:latestTotal.toLocaleString(),sub:agingFmtDate(latest),color:'var(--orange)'},
@@ -1413,6 +1414,74 @@ async function sendGTCTotalToTelegram(){
   const img=await _captureEl('p1_amCard');
   await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
  }catch(e){console.error('TG GTC Error:',e);alert('Lỗi gửi Telegram: '+e.message);}
+}
+
+/* ===== TELEGRAM: BẮN TẤT CẢ ===== */
+async function sendAllToTelegram(){
+ const btn=document.getElementById('tgSidebarBtn');
+ const icon=document.getElementById('tgSidebarIcon');
+ if(btn){btn.disabled=true; btn.innerHTML='⏳ Đang gửi...';}
+
+ async function navTo(pid){
+  const el=document.getElementById(pid);
+  if(!el||getComputedStyle(el).display==='none'){
+   const nav=document.querySelector(`[onclick="show('${pid}',this)"]`);
+   if(nav)nav.click();
+   await new Promise(r=>setTimeout(r,800));
+  }
+ }
+ async function sendPhoto(elId,chatId,threadId,cap){
+  const img=await _captureEl(elId);
+  await _tgSendPhoto(chatId,threadId,img,cap);
+  await new Promise(r=>setTimeout(r,500));
+ }
+
+ try{
+  /* --- P16: Vận Hành Ngày → VH thread --- */
+  await navTo('p16');
+  if(document.getElementById('p16-card-a')){
+   await sendPhoto('p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`);
+  }
+  if(document.getElementById('p16-card-b')&&document.getElementById('p16-card-b').innerHTML.trim()){
+   await sendPhoto('p16-card-b',TG_AGING_CHAT,TG_VH_THREAD,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
+  }
+
+  /* --- P1: GTC Total Theo AM → VH thread --- */
+  await navTo('p1');
+  if(document.getElementById('p1_amCard')){
+   await sendPhoto('p1_amCard',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
+  }
+
+  /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
+  await navTo('p3');
+  if(document.getElementById('p3-card-am')){
+   await sendPhoto('p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO AM</b>`);
+  }
+  if(document.getElementById('p3-card-bc')){
+   await sendPhoto('p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO BƯU CỤC</b>`);
+  }
+
+  /* --- P7: Aging → Aging thread --- */
+  await navTo('p7');
+  await new Promise(r=>setTimeout(r,400));
+  if(document.getElementById('aging-cards')){
+   await sendPhoto('aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING — ${new Date().toLocaleDateString('vi-VN')}</b>`);
+  }
+  if(document.getElementById('aging-tbl-am')){
+   await sendPhoto('aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
+  }
+  if(document.getElementById('aging-tbl-batOn')){
+   await sendPhoto('aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
+  }
+  if(document.getElementById('aging-tbl-bc')){
+   await sendPhoto('aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
+  }
+
+  if(btn){btn.innerHTML='✅ Đã gửi!'; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+ }catch(e){
+  console.error('sendAllToTelegram error:',e);
+  if(btn){btn.innerHTML='❌ Lỗi: '+e.message; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},4000);}
+ }
 }
 
 /* ===== AI PAGE ===== */
@@ -1716,7 +1785,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
  }
  return`<div class="page-header">
   <div class="page-title">📋 Báo Cáo Vận Hành Ngày</div>
-  <div class="page-meta"><span>Chọn ngày: ${dateSelect}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span><button onclick="sendP16ToTelegram()" style="display:inline-block;background:#229ED9;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">📤 Gửi Telegram</button></div>
+  <div class="page-meta"><span>Chọn ngày: ${dateSelect}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span></div>
  </div>
  <div class="card" id="p16-card-a">
   <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>A. Báo Cáo Vận Hành Ngày</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao</div></div>
