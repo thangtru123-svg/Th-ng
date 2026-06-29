@@ -1430,57 +1430,46 @@ async function sendAllToTelegram(){
    await new Promise(r=>setTimeout(r,800));
   }
  }
- async function sendPhoto(elId,chatId,threadId,cap){
+ async function sendPhoto(label,elId,chatId,threadId,cap){
+  if(btn) btn.innerHTML=`⏳ Đang gửi: ${label}...`;
+  const el=document.getElementById(elId);
+  if(!el){console.warn('[TG] element not found:',elId);return;}
   const img=await _captureEl(elId);
-  await _tgSendPhoto(chatId,threadId,img,cap);
-  await new Promise(r=>setTimeout(r,500));
+  const res=await _tgSendPhoto(chatId,threadId,img,cap);
+  if(!res.ok) throw new Error(`[${label}] TG API lỗi: ${res.description||JSON.stringify(res)}`);
+  await new Promise(r=>setTimeout(r,600));
  }
 
  try{
   /* --- P16: Vận Hành Ngày → VH thread --- */
   await navTo('p16');
-  if(document.getElementById('p16-card-a')){
-   await sendPhoto('p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`);
-  }
-  if(document.getElementById('p16-card-b')&&document.getElementById('p16-card-b').innerHTML.trim()){
-   await sendPhoto('p16-card-b',TG_AGING_CHAT,TG_VH_THREAD,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
+  await sendPhoto('Vận Hành Ngày','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`);
+  const cardB=document.getElementById('p16-card-b');
+  if(cardB&&cardB.innerHTML.trim()){
+   await sendPhoto('TỶ LỆ GTC TTS','p16-card-b',TG_AGING_CHAT,TG_VH_THREAD,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
   }
 
   /* --- P1: GTC Total Theo AM → VH thread --- */
   await navTo('p1');
-  if(document.getElementById('p1_amCard')){
-   await sendPhoto('p1_amCard',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
-  }
+  await sendPhoto('GTC Total Theo AM','p1_amCard',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
 
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
-  if(document.getElementById('p3-card-am')){
-   await sendPhoto('p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO AM</b>`);
-  }
-  if(document.getElementById('p3-card-bc')){
-   await sendPhoto('p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO BƯU CỤC</b>`);
-  }
+  await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO AM</b>`);
+  await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO BƯU CỤC</b>`);
 
   /* --- P7: Aging → Aging thread --- */
   await navTo('p7');
   await new Promise(r=>setTimeout(r,400));
-  if(document.getElementById('aging-cards')){
-   await sendPhoto('aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING — ${new Date().toLocaleDateString('vi-VN')}</b>`);
-  }
-  if(document.getElementById('aging-tbl-am')){
-   await sendPhoto('aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
-  }
-  if(document.getElementById('aging-tbl-batOn')){
-   await sendPhoto('aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
-  }
-  if(document.getElementById('aging-tbl-bc')){
-   await sendPhoto('aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
-  }
+  await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING — ${new Date().toLocaleDateString('vi-VN')}</b>`);
+  await sendPhoto('Aging Theo AM','aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
+  await sendPhoto('BC Bất Ổn','aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
+  await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
 
-  if(btn){btn.innerHTML='✅ Đã gửi!'; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+  if(btn){btn.innerHTML='✅ Đã gửi xong!'; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
  }catch(e){
   console.error('sendAllToTelegram error:',e);
-  if(btn){btn.innerHTML='❌ Lỗi: '+e.message; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},4000);}
+  if(btn){btn.innerHTML='❌ '+e.message; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},6000);}
  }
 }
 
