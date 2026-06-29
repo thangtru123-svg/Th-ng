@@ -456,7 +456,7 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
   <select id="${pid}_dTo" onchange="renderGTC('${pid}')">${mkOpts(dTo)}</select>
  </div>
  <div class="card" id="${pid}_amCard"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %GTC cao → thấp · Cố định cột tên</div></div><div id="${pid}_amTable"></div></div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Top 30 BC · Grand Total cố định cuối</div></div><div id="${pid}_bcTable"></div></div>`;
+ <div class="card" id="${pid}_bcCard"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Top 30 BC · Grand Total cố định cuối</div></div><div id="${pid}_bcTable"></div></div>`;
 }
 
 /* ===== DASHBOARD 3: FD NGÀY ===== */
@@ -1419,57 +1419,152 @@ async function sendGTCTotalToTelegram(){
 /* ===== TELEGRAM: BẮN TẤT CẢ ===== */
 async function sendAllToTelegram(){
  const btn=document.getElementById('tgSidebarBtn');
- const icon=document.getElementById('tgSidebarIcon');
- if(btn){btn.disabled=true; btn.innerHTML='⏳ Đang gửi...';}
+ if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ const num=n=>n.toLocaleString('vi-VN');
+ const fD=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+ const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
 
  async function navTo(pid){
   const el=document.getElementById(pid);
   if(!el||getComputedStyle(el).display==='none'){
    const nav=document.querySelector(`[onclick="show('${pid}',this)"]`);
    if(nav)nav.click();
-   await new Promise(r=>setTimeout(r,800));
+   await new Promise(r=>setTimeout(r,900));
   }
  }
  async function sendPhoto(label,elId,chatId,threadId,cap){
-  if(btn) btn.innerHTML=`⏳ Đang gửi: ${label}...`;
+  if(btn)btn.innerHTML=`⏳ Đang gửi: ${label}...`;
   const el=document.getElementById(elId);
   if(!el){console.warn('[TG] element not found:',elId);return;}
   const img=await _captureEl(elId);
   const res=await _tgSendPhoto(chatId,threadId,img,cap);
-  if(!res.ok) throw new Error(`[${label}] TG API lỗi: ${res.description||JSON.stringify(res)}`);
+  if(!res.ok)throw new Error(`[${label}] TG lỗi: ${res.description||JSON.stringify(res)}`);
   await new Promise(r=>setTimeout(r,600));
+ }
+
+ /* ── Caption: P16 Vận Hành Ngày ── */
+ function capP16(){
+  const raw=window._DAILY_RAW;if(!raw?.ca12)return`📋 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`;
+  const data=raw.ca12.slice(1).filter(r=>r.length>5);
+  const isGrand=r=>!(r[0]||'').trim()||(r[0]||'').toLowerCase().includes('grand total');
+  const allD=[...new Set(data.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0],prev=allD[1];if(!latest)return`📋 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`;
+  const pivot={};
+  data.filter(r=>!isGrand(r)&&isoD(r[2])===latest).forEach(r=>{
+   const am=(r[0]||'').trim();if(!am)return;
+   if(!pivot[am])pivot[am]={vol:0,nGTC:0};
+   pivot[am].vol+=Math.round(parseFloat(r[3])||0);
+   pivot[am].nGTC+=Math.round(parseFloat(r[6])||0);
+  });
+  Object.keys(pivot).forEach(am=>{pivot[am].gtc=pivot[am].vol>0?pivot[am].nGTC/pivot[am].vol*100:0;});
+  const gL={vol:0,nGTC:0},gP={vol:0,nGTC:0};
+  data.filter(r=>isGrand(r)&&isoD(r[2])===latest).forEach(r=>{gL.vol+=Math.round(parseFloat(r[3])||0);gL.nGTC+=Math.round(parseFloat(r[6])||0);});
+  if(prev)data.filter(r=>isGrand(r)&&isoD(r[2])===prev).forEach(r=>{gP.vol+=Math.round(parseFloat(r[3])||0);gP.nGTC+=Math.round(parseFloat(r[6])||0);});
+  gL.gtc=gL.vol>0?gL.nGTC/gL.vol*100:0;gP.gtc=gP.vol>0?gP.nGTC/gP.vol*100:0;
+  const names=Object.keys(pivot).sort((a,b)=>pivot[a].gtc-pivot[b].gtc);
+  const worst=names[0],best=names[names.length-1];
+  const red=names.filter(n=>pivot[n].gtc<50).length,yel=names.filter(n=>pivot[n].gtc>=50&&pivot[n].gtc<65).length,grn=names.filter(n=>pivot[n].gtc>=65).length;
+  let cap=`📋 <b>BÁO CÁO VẬN HÀNH NGÀY — ${fD(latest)}</b>\n`;
+  cap+=`Tổng Giao <b>${num(gL.vol)}</b> đơn · GTC <b>${num(gL.nGTC)}</b> đơn · <b>${gL.gtc.toFixed(1)}%</b>\n`;
+  if(gP.vol>0){const dV=gL.vol-gP.vol,dG=gL.nGTC-gP.nGTC,dP=gL.gtc-gP.gtc;cap+=`So với hôm qua: Vol ${dV>=0?'▲ tăng':'▼ giảm'} ${num(Math.abs(dV))} · GTC ${dG>=0?'▲ tăng':'▼ giảm'} ${num(Math.abs(dG))} · %GTC ${dP>=0?'▲':'▼'} ${Math.abs(dP).toFixed(1)}%\n`;}
+  cap+=`\n📝 `;
+  if(worst)cap+=`AM tệ nhất: ${worst} (${pivot[worst].gtc.toFixed(1)}%).\n`;
+  if(best)cap+=`AM tốt nhất: ${best} (${pivot[best].gtc.toFixed(1)}%).\n`;
+  cap+=`Xanh (≥65%): ${grn} AM · Vàng (50-65%): ${yel} AM · Đỏ (<50%): ${red} AM.`;
+  return trimCap(cap);
+ }
+
+ /* ── Caption: P1 GTC Total Theo BC ── */
+ function capGTCBc(){
+  const g=window._GTC?.['p1'];if(!g?.rowsBC)return`🏪 <b>TỔNG QUAN GTC TOTAL — THEO BƯU CỤC</b>`;
+  const data=g.rowsBC.slice(1).filter(r=>r.length>5&&(r[1]||'').trim());
+  const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
+  const bcRows=data.filter(r=>!isGrand(r));
+  const gRows=data.filter(r=>isGrand(r));
+  const allD=[...new Set(data.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0],prev=allD[1];if(!latest)return`🏪 <b>TỔNG QUAN GTC TOTAL — THEO BƯU CỤC</b>`;
+  const pivot={};
+  bcRows.filter(r=>isoD(r[2])===latest).forEach(r=>{const bc=(r[1]||'').trim();if(!bc)return;pivot[bc]={vol:Math.round(parseFloat(r[3])||0),gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
+  const gL=gRows.find(r=>isoD(r[2])===latest),gP=gRows.find(r=>isoD(r[2])===prev);
+  const names=Object.keys(pivot).sort((a,b)=>pivot[a].gtc-pivot[b].gtc);
+  const worst=names[0],best=names[names.length-1];
+  const red=names.filter(n=>pivot[n].gtc<50).length,yel=names.filter(n=>pivot[n].gtc>=50&&pivot[n].gtc<65).length,grn=names.filter(n=>pivot[n].gtc>=65).length;
+  let cap=`🏪 <b>TỔNG QUAN GTC TOTAL — THEO BƯU CỤC</b>\n`;
+  if(gL){
+   const vol=Math.round(parseFloat(gL[3])||0),gtc=(parseFloat(gL[5])||0)*100,nGTC=Math.round(parseFloat(gL[6])||0);
+   cap+=`Ngày ${fD(latest)}: Vol <b>${num(vol)}</b> đơn · GTC <b>${num(nGTC)}</b> đơn · <b>${gtc.toFixed(1)}%</b>\n`;
+   if(gP){const v2=Math.round(parseFloat(gP[3])||0),g2=Math.round(parseFloat(gP[6])||0),p2=(parseFloat(gP[5])||0)*100;const dV=vol-v2,dG=nGTC-g2,dP=gtc-p2;cap+=`So với hôm qua: Vol ${dV>=0?'▲ tăng':'▼ giảm'} ${num(Math.abs(dV))} · GTC ${dG>=0?'▲ tăng':'▼ giảm'} ${num(Math.abs(dG))} · %GTC ${dP>=0?'▲':'▼'} ${Math.abs(dP).toFixed(1)}%\n`;}
+  }
+  cap+=`\n📝 `;
+  if(worst)cap+=`BC tệ nhất: ${worst} (${pivot[worst].gtc.toFixed(1)}%).\n`;
+  if(best)cap+=`BC tốt nhất: ${best} (${pivot[best].gtc.toFixed(1)}%).\n`;
+  cap+=`Xanh (≥65%): ${grn} BC · Vàng (50-65%): ${yel} BC · Đỏ (<50%): ${red} BC.`;
+  return trimCap(cap);
+ }
+
+ /* ── Caption: P3 TLT Theo AM / BC ── */
+ function capFD(type){
+  const fd=window._FD;const rows=type==='am'?fd?.totalAM:fd?.totalBC;
+  const lbl=type==='am'?'AM':'Bưu Cục';
+  if(!rows||rows.length<2)return`📊 <b>TỈ LỆ TRẢ NGÀY — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>`;
+  const isGrand=n=>n.toLowerCase().includes('grand total')||!n;
+  const allD=[...new Set(rows.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0],prev=allD[1];if(!latest)return`📊 <b>TỈ LỆ TRẢ NGÀY</b>`;
+  const data={},dataPrev={};
+  rows.slice(1).forEach(r=>{
+   const name=(r[0]||'').trim(),d=isoD(r[1]),v=parsePct(r[3]);
+   if(!name)return;
+   if(d===latest&&!isGrand(name))data[name]=v;
+   if(d===prev&&!isGrand(name))dataPrev[name]=v;
+  });
+  const gL=rows.slice(1).find(r=>isoD(r[1])===latest&&isGrand((r[0]||'').trim()));
+  const gP=rows.slice(1).find(r=>isoD(r[1])===prev&&isGrand((r[0]||'').trim()));
+  const names=Object.keys(data);
+  const sorted=[...names].sort((a,b)=>(data[b]||0)-(data[a]||0));
+  const high15=names.filter(n=>(data[n]||0)>=15).length;
+  let cap=`📊 <b>TỈ LỆ TRẢ NGÀY — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>\n`;
+  if(gL){
+   const fdG=parsePct(gL[3]);cap+=`Ngày ${fD(latest)}: %FD Total <b>${fdG.toFixed(1)}%</b>\n`;
+   if(gP){const fdG2=parsePct(gP[3]);const d=fdG-fdG2;cap+=`So với hôm qua: ${d>0?'▲ tăng':'▼ giảm'} <b>${Math.abs(d).toFixed(1)}%</b>\n`;}
+  }
+  cap+=`${lbl} vượt 15%: <b>${high15} ${lbl}</b>\n\n`;
+  cap+=`📝 Top 3 FD cao nhất:\n`;
+  cap+=sorted.slice(0,3).map(n=>`• ${n}: ${(data[n]||0).toFixed(1)}%`).join('\n');
+  cap+=`\nTop 3 FD thấp nhất:\n`;
+  cap+=sorted.slice(-3).reverse().map(n=>`• ${n}: ${(data[n]||0).toFixed(1)}%`).join('\n');
+  return trimCap(cap);
  }
 
  try{
   /* --- P16: Vận Hành Ngày → VH thread --- */
   await navTo('p16');
-  await sendPhoto('Vận Hành Ngày','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`);
+  await sendPhoto('Vận Hành Ngày','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
   const cardB=document.getElementById('p16-card-b');
   if(cardB&&cardB.innerHTML.trim()){
    await sendPhoto('TỶ LỆ GTC TTS','p16-card-b',TG_AGING_CHAT,TG_VH_THREAD,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
   }
 
-  /* --- P1: GTC Total Theo AM → VH thread --- */
+  /* --- P1: GTC Total Theo BC → VH thread --- */
   await navTo('p1');
-  await sendPhoto('GTC Total Theo AM','p1_amCard',TG_AGING_CHAT,TG_VH_THREAD,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
+  await sendPhoto('GTC Total Theo BC','p1_bcCard',TG_AGING_CHAT,TG_VH_THREAD,capGTCBc());
 
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
-  await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO AM</b>`);
-  await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,`📊 <b>TỈ LỆ TRẢ NGÀY — THEO BƯU CỤC</b>`);
+  await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
+  await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
 
-  /* --- P7: Aging → Aging thread --- */
+  /* --- P7: Aging → Aging thread (dùng sendAgingToTelegram logic) --- */
   await navTo('p7');
   await new Promise(r=>setTimeout(r,400));
-  await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING — ${new Date().toLocaleDateString('vi-VN')}</b>`);
+  await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING</b>`);
   await sendPhoto('Aging Theo AM','aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
   await sendPhoto('BC Bất Ổn','aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
   await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
 
-  if(btn){btn.innerHTML='✅ Đã gửi xong!'; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+  if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
  }catch(e){
   console.error('sendAllToTelegram error:',e);
-  if(btn){btn.innerHTML='❌ '+e.message; setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},6000);}
+  if(btn){btn.innerHTML='❌ '+e.message;setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},6000);}
  }
 }
 
