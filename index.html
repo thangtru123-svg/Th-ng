@@ -1472,7 +1472,7 @@ async function sendAllToTelegram(){
   cap+=`\n📝 `;
   if(worst)cap+=`AM tệ nhất: ${worst} (${pivot[worst].gtc.toFixed(1)}%).\n`;
   if(best)cap+=`AM tốt nhất: ${best} (${pivot[best].gtc.toFixed(1)}%).\n`;
-  cap+=`Xanh (≥65%): ${grn} AM · Vàng (50-65%): ${yel} AM · Đỏ (<50%): ${red} AM.`;
+  cap+=`Xanh (≥65%): ${grn} AM · Vàng (50-65%): ${yel} AM · Đỏ (&lt;50%): ${red} AM.`;
   return trimCap(cap);
  }
 
@@ -1500,7 +1500,7 @@ async function sendAllToTelegram(){
   cap+=`\n📝 `;
   if(worst)cap+=`BC tệ nhất: ${worst} (${pivot[worst].gtc.toFixed(1)}%).\n`;
   if(best)cap+=`BC tốt nhất: ${best} (${pivot[best].gtc.toFixed(1)}%).\n`;
-  cap+=`Xanh (≥65%): ${grn} BC · Vàng (50-65%): ${yel} BC · Đỏ (<50%): ${red} BC.`;
+  cap+=`Xanh (≥65%): ${grn} BC · Vàng (50-65%): ${yel} BC · Đỏ (&lt;50%): ${red} BC.`;
   return trimCap(cap);
  }
 
