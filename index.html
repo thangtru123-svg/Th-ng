@@ -2308,9 +2308,9 @@ function buildWeakBCSection(selDate){
   fd:fL[b.bc]??null,prevFd:fP[b.bc]??null,aging:aL[b.bc]||0,prevAging:aP[b.bc]||0
  }));
  list.sort((a,b)=>a.pctGTC-b.pctGTC);
- const top3=list.slice(0,3);
+ const top3=list.slice(0,5);
  if(!top3.length)return'';
- const medals=['🥇','🥈','🥉'];
+ const medals=['🥇','🥈','🥉','4️⃣','5️⃣'];
  const fN=n=>(+n||0).toLocaleString('vi-VN');
  const parseBC=name=>{const m=name.match(/^([A-Z]{2,4})\s+(.+)/);return m?{code:m[1],short:m[2]}:{code:'',short:name};};
  const deltaT=(curr,prev,isPercent=false,lowerBetter=false)=>{
@@ -2356,7 +2356,7 @@ function buildWeakBCSection(selDate){
  const dateOpts=datesBC.slice().reverse().map(d=>`<option value="${d}"${d===latest?' selected':''}>${fmtS(d)}</option>`).join('');
  return`<div class="card" id="weakBCSection">
   <div class="card-header">
-   <div class="card-title"><div class="card-icon">📊</div>C. 3 BC Yếu Nhất — 5 Chỉ Số (${fmtS(latest)} vs ${prev?fmtS(prev):'—'})</div>
+   <div class="card-title"><div class="card-icon">📊</div>C. 5 BC Yếu Nhất — 5 Chỉ Số (${fmtS(latest)} vs ${prev?fmtS(prev):'—'})</div>
    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--text-sub)">Ngày:</span>
     <select onchange="rebuildWeakBC(this.value)" style="font-size:12px;padding:3px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer">${dateOpts}</select>
