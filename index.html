@@ -1684,23 +1684,50 @@ function buildWeeklyReport(){
  function wLabel(wk){const p=wk.split('-W');return p[1]?`Tuần ${+p[1]}`:wk;}
  const src=window._D?.gtcTotalAM;
  if(!src||src.length<2){p.innerHTML='<div style="padding:24px;color:var(--text-sub)">Chưa có dữ liệu GTC để tính tuần</div>';return;}
- const wkSet={};src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w)wkSet[w]=true;}});
+ // Thu thập tất cả tuần có sẵn từ mọi nguồn
+ const wkSet={};
+ const collectW=(rows,col)=>(rows||[]).slice(1).forEach(r=>{const d=isoD(r[col]);if(d){const w=getW(d);if(w)wkSet[w]=true;}});
+ collectW(src,1);collectW(window._D?.gtcTotalBC,2);collectW(window._D?.odrAM,1);collectW(window._D?.oprAM,1);collectW(window._FD?.totalAM,1);
  const weeks=Object.keys(wkSet).sort();
  if(weeks.length<2){p.innerHTML='<div style="padding:24px;color:var(--text-sub)">Cần ít nhất 2 tuần dữ liệu</div>';return;}
- const wA=weeks[weeks.length-2],wB=weeks[weeks.length-1];
- const wALabel=wLabel(wA),wBLabel=wLabel(wB);
- const datesA=new Set(),datesB=new Set();
- src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w===wA)datesA.add(d);if(w===wB)datesB.add(d);}});
- const buildDS=(rows,dcol)=>{const a=new Set(),b=new Set();(rows||[]).slice(1).forEach(r=>{const d=isoD(r[dcol]);if(d){const w=getW(d);if(w===wA)a.add(d);if(w===wB)b.add(d);}});return{a,b};};
- const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
- const p0=(vol,cnt)=>vol>0?cnt/vol*100:0;
- const num=n=>(+n||0).toLocaleString('vi-VN');
- const gc=v=>v>=65?'g':v>=50?'m':'b';
- const gco=v=>v>=90?'g':v>=80?'m':'b';
- const gcfd=v=>v<10?'g':v<15?'m':'b';
- const cs='padding:7px 10px;';
- const ANA=(html)=>`<div class="analysis-box">${html}</div>`;
- const dc=(d,rev=false)=>rev?(d<=0?'var(--green)':'var(--red)'):(d>=0?'var(--green)':'var(--red)');
+ const dW=weeks[weeks.length-2],dB=weeks[weeks.length-1];
+ // Build filter toolbar + shell
+ const mkOpts=(sel)=>weeks.map(w=>`<option value="${w}"${w===sel?' selected':''}>${wLabel(w)}</option>`).join('');
+ const selStyle='padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;cursor:pointer';
+ p.innerHTML=`
+  <div class="page-header">
+   <div class="page-title">📅 Báo Cáo Vận Hành Tuần</div>
+   <div class="page-meta" id="p17-meta"><span class="tag tag-orange">📊 So sánh ${wLabel(dW)} vs ${wLabel(dB)}</span></div>
+  </div>
+  <div style="display:flex;gap:12px;align-items:center;padding:12px 16px;background:var(--card-bg);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;flex-wrap:wrap">
+   <span style="font-weight:600;color:var(--text-sub);font-size:13px">🗓️ Chọn tuần so sánh:</span>
+   <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text)">Tuần A:
+    <select id="wk-sel-a" style="${selStyle}" onchange="window._wkRerender()">${mkOpts(dW)}</select>
+   </label>
+   <span style="font-size:16px;color:var(--text-sub)">→</span>
+   <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text)">Tuần B:
+    <select id="wk-sel-b" style="${selStyle}" onchange="window._wkRerender()">${mkOpts(dB)}</select>
+   </label>
+  </div>
+  <div id="p17-tables"></div>
+ `;
+ function renderTables(wA,wB){
+  const tbl=document.getElementById('p17-tables');if(!tbl)return;
+  const wALabel=wLabel(wA),wBLabel=wLabel(wB);
+  const metaEl=document.getElementById('p17-meta');
+  if(metaEl)metaEl.innerHTML=`<span class="tag tag-orange">📊 So sánh ${wALabel} vs ${wBLabel}</span>`;
+  const datesA=new Set(),datesB=new Set();
+  src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w===wA)datesA.add(d);if(w===wB)datesB.add(d);}});
+  const buildDS=(rows,dcol)=>{const a=new Set(),b=new Set();(rows||[]).slice(1).forEach(r=>{const d=isoD(r[dcol]);if(d){const w=getW(d);if(w===wA)a.add(d);if(w===wB)b.add(d);}});return{a,b};};
+  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
+  const p0=(vol,cnt)=>vol>0?cnt/vol*100:0;
+  const num=n=>(+n||0).toLocaleString('vi-VN');
+  const gc=v=>v>=65?'g':v>=50?'m':'b';
+  const gco=v=>v>=90?'g':v>=80?'m':'b';
+  const gcfd=v=>v<10?'g':v<15?'m':'b';
+  const cs='padding:7px 10px;';
+  const ANA=(html)=>`<div class="analysis-box">${html}</div>`;
+  const dc=(d,rev=false)=>rev?(d<=0?'var(--green)':'var(--red)'):(d>=0?'var(--green)':'var(--red)');
 
  /* ── Bảng 1: GTC Total Vùng Ca1/Ca2/Hàng Tồn ── */
  function bld1(){
@@ -1991,11 +2018,7 @@ function buildWeeklyReport(){
 
  function card(title,icon,content,info=''){return`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">${icon}</div>${title}</div>${info?`<div class="card-info">${info}</div>`:''}</div>${content}</div>`;}
 
- p.innerHTML=`
-  <div class="page-header">
-   <div class="page-title">📅 Báo Cáo Vận Hành Tuần</div>
-   <div class="page-meta"><span class="tag tag-orange">📊 So sánh ${wALabel} vs ${wBLabel}</span></div>
-  </div>
+ tbl.innerHTML=`
   ${card(`Bảng 1 — GTC Total Vùng: Ca 1 / Ca 2 / Hàng Tồn`,'📦',bld1(),`So sánh ${wALabel} vs ${wBLabel}`)}
   ${card(`Bảng 2 — GTC theo AM`,'👤',bld2(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
   ${card(`Bảng 3 — Top 20 BC GTC tệ nhất ${wBLabel}`,'🏪',bld3(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
@@ -2007,7 +2030,14 @@ function buildWeeklyReport(){
   ${card(`Bảng 9 — Ontime Lấy TTS (OPR) theo AM`,'👤',bldOntAM(window._D?.oprAM,'OPR AM'),`${wALabel} vs ${wBLabel}`)}
   ${card(`Bảng 10 — Ontime Lấy TTS (OPR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.oprBC,false,50,'OPR'),`${wALabel} vs ${wBLabel}`)}
   ${card(`Bảng 11 — BC Vol LTC cao, Ontime OPR < 80%`,'⚠️',bldOntBC(window._D?.oprBC,true,50,'OPR'),`Lọc: ${wBLabel} OPR < 80% · Sắp xếp: Vol LTC ${wBLabel} cao → thấp`)}
- `;
+  `;
+ }
+ window._wkRerender=()=>{
+  const a=document.getElementById('wk-sel-a')?.value;
+  const b=document.getElementById('wk-sel-b')?.value;
+  if(a&&b)renderTables(a,b);
+ };
+ renderTables(dW,dB);
 }
 
 
