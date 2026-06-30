@@ -573,22 +573,32 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  const isGrand=n=>n.toLowerCase().includes('grand total');
  const regular=[...allNames].filter(n=>!isGrand(n));
  const grands=[...allNames].filter(n=>isGrand(n));
- const sorted=regular.sort((a,b)=>(dData[0]?.[0]?.[b]?.fd??-1)-(dData[0]?.[0]?.[a]?.fd??-1));
- const names=[...sorted,...grands];
- if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const cs='padding:6px 8px;';
- // Số trả = fd/100 × nGTC / (1 - fd/100)
+ // Số trả = fd/100 × nGTC / (1 - fd/100) — chỉ tính khi fd < 50% (tránh số nổ)
  const calcSoTra=(name,d,fd)=>{
-  if(!gtcMap||fd===null||fd>=100)return null;
+  if(!gtcMap||fd===null||fd>=50)return null;
   const normName=name.split(',').map(s=>s.trim()).sort().join(',');
   const nGTC=gtcMap[normName]?.[d]??null;
   if(nGTC===null||nGTC===0)return null;
   return Math.round(fd/100*nGTC/(1-fd/100));
  };
+ // Phát hiện ngày có data bất thường (>80% AM báo FD>=90%)
+ const isBadDay=(di)=>{
+  const dd=dData[di]?.[0]||{};const vals=Object.entries(dd).filter(([n])=>!n.toLowerCase().includes('grand total'));
+  if(!vals.length)return false;
+  const badCount=vals.filter(([,v])=>v.fd!=null&&v.fd>=90).length;
+  return badCount/vals.length>0.8;
+ };
+ // Sort theo ngày tốt nhất (gần nhất không phải bad day)
+ const sortDayIdx=dates.findIndex((_,di)=>!isBadDay(di));
+ const refIdx=sortDayIdx>=0?sortDayIdx:0;
+ const sorted=regular.sort((a,b)=>(dData[refIdx]?.[0]?.[b]?.fd??-1)-(dData[refIdx]?.[0]?.[a]?.fd??-1));
+ const names=[...sorted,...grands];
+ if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const hasGTC=!!gtcMap;
  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:none"><table><thead style="position:sticky;top:0;z-index:4">`;
  h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:160px;max-width:200px">${nameLabel}</th>`;
- dates.forEach((d,di)=>{const bg=DC[di%DC.length];const span=hasGTC?labels.length+1:labels.length;h+=`<th colspan="${span}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>${shortDDow(d)}</strong></th>`;});
+ dates.forEach((d,di)=>{const bg=DC[di%DC.length];const span=hasGTC?labels.length+1:labels.length;const bad=isBadDay(di);h+=`<th colspan="${span}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bad?'#FEF3C7':bg}"><strong>${shortDDow(d)}</strong>${bad?` <span title="Dữ liệu chưa đầy đủ" style="color:#D97706;font-size:10px">⚠️ chưa đủ</span>`:''}</th>`;});
  h+='</tr><tr>';
  dates.forEach((d,di)=>{
   const bg=DC[di%DC.length];
