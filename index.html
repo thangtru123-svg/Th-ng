@@ -743,7 +743,7 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
    labels.forEach((l,si)=>{
     const fd1=wMap[si]?.[grandKey]?.[w1]??null;const fd2=wMap[si]?.[grandKey]?.[w2]??null;
     if(fd1!==null&&fd2!==null){
-     const diff=fd2-fd1;const isUp=diff>0;
+     const diff=fd1-fd2;const isUp=diff>0;
      const color=isUp?'var(--red)':'var(--green)';const arrow=isUp?'▲':'▼';
      h+=`<div style="background:#fff;border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:110px;text-align:center"><div style="font-size:11px;font-weight:600;color:var(--text-sub);margin-bottom:4px">${l}</div><div style="font-size:14px;font-weight:700;color:${color}">${arrow} ${Math.abs(diff).toFixed(1)}%</div><div style="font-size:10px;color:var(--text-sub)">T${w1}: ${fd1.toFixed(1)}% → T${w2}: ${fd2.toFixed(1)}%</div></div>`;
     }
