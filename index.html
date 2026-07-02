@@ -1629,9 +1629,30 @@ async function sendAllToTelegram(){
    }
   }
 
-  /* --- P1: GTC Total Theo BC → VH thread --- */
+  /* --- P1: GTC Total Theo BC → VH thread (clone card, an search bar) --- */
   await navTo('p1');
-  await sendPhoto('GTC Total Theo BC','p1_bcCard',TG_AGING_CHAT,TG_VH_THREAD,capGTCBc());
+  {
+   if(btn)btn.innerHTML='⏳ Đang gửi: GTC Total Theo BC...';
+   const p1bc=document.getElementById('p1_bcCard');
+   if(p1bc){
+    const cl=p1bc.cloneNode(true);
+    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    const tmp=document.createElement('div');
+    tmp.id='tg-p1-bc';
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
+    tmp.appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,300));
+    try{
+     const img=await _captureEl('tg-p1-bc');
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
+     if(!res.ok)throw new Error('P1 BC loi: '+(res.description||JSON.stringify(res)));
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,600));
+   }else{
+    await sendPhoto('GTC Total Theo BC','p1_bcCard',TG_AGING_CHAT,TG_VH_THREAD,capGTCBc());
+   }
+  }
 
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
