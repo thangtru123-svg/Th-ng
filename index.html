@@ -646,7 +646,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  });
  h+='</tr>';
  h+='</tbody></table></div>';
- if(dates.length>=2&&nameLabel==='AM'){
+ if(dates.length>=2){
   // Tính GT weighted average cho từng (di, si)
   const computeGT=(di,si)=>{const dd=dData[di]?.[si]||{};const vs=Object.entries(dd).filter(([n])=>!isGrand(n)).map(([,v])=>v);const sv=vs.reduce((s,v)=>s+(v.vol||0),0);const sf=vs.reduce((s,v)=>s+(v.fd||0)*(v.vol||0),0);return sv>0?sf/sv:null;};
   // AM tệ nhất: fd cao nhất
@@ -1598,21 +1598,27 @@ async function sendAllToTelegram(){
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
   await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
-  /* BC: chỉ chụp Top 15 FD total cao nhất */
+  /* BC: chụp Top 15 FD total + analysis, clone card đầy đủ */
   {
    if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo BC Top 15...';
-   const bcTbl=document.querySelector('#fdDayBCTable table');
-   if(bcTbl){
-    const cl=bcTbl.cloneNode(true);
-    const tb=cl.querySelector('tbody');
-    if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot')||tr.textContent.toLowerCase().includes('grand total');if(!isTot){if(k>=15)tr.remove();else k++;}});}
+   const bcCard=document.getElementById('p3-card-bc');
+   const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
+   if(bcCard&&bcTbl){
+    const cl=bcCard.cloneNode(true);
+    // Ẩn search bar (div trước table trong .table-wrap)
+    cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+    // Trim tbody xuống 15 rows BC (giữ grand total)
+    const mainTbl=cl.querySelector('table[data-bc-srch]');
+    if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}
+    // Sửa title card
+    const titleEl=cl.querySelector('.card-title');
+    if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';
     const tmp=document.createElement('div');
     tmp.id='tg-bc-top15';
-    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
-    tmp.innerHTML='<div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất</div></div></div>';
-    tmp.querySelector('.card').appendChild(cl);
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';
+    tmp.appendChild(cl);
     document.body.appendChild(tmp);
-    await new Promise(r=>setTimeout(r,200));
+    await new Promise(r=>setTimeout(r,300));
     try{
      const img=await _captureEl('tg-bc-top15');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));
