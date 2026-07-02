@@ -1671,6 +1671,8 @@ async function sendAllToTelegram(){
    if(amCard){
     const cl=amCard.cloneNode(true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
     const tmp=document.createElement('div');
     tmp.id='tg-am-fd';
     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';
@@ -1696,6 +1698,8 @@ async function sendAllToTelegram(){
     const cl=bcCard.cloneNode(true);
     // Ẩn search bar (div trước table trong .table-wrap)
     cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+    // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
     // Trim tbody xuống 15 rows BC (giữ grand total)
     const mainTbl=cl.querySelector('table[data-bc-srch]');
     if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}
