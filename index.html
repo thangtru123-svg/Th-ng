@@ -2631,207 +2631,308 @@ async function buildVolumeReport(){
  try{
   const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`);
   if(!r.ok)throw new Error('HTTP '+r.status);
-  el.innerHTML=buildVolumePage(await r.text());
+  window._volCSV=await r.text();
+  el.innerHTML=buildVolumePage(window._volCSV);
  }catch(e){el.innerHTML=errPage('Không thể tải dữ liệu Volume: '+e.message);}
 }
 
 function buildVolumePage(csvText){
- // CSV parser hỗ trợ quoted fields
  function parseLine(line){
   const cols=[];let cur='',inQ=false;
   for(let i=0;i<line.length;i++){
    const c=line[i];
-   if(c==='"'){inQ=!inQ;}
-   else if(c===','&&!inQ){cols.push(cur);cur='';}
-   else cur+=c;
+   if(c==='"'){inQ=!inQ;}else if(c===','&&!inQ){cols.push(cur);cur='';}else cur+=c;
   }
-  cols.push(cur.replace('\r',''));
-  return cols;
+  cols.push(cur.replace('\r',''));return cols;
  }
- const allRows=csvText.split('\n').slice(1).map(l=>parseLine(l)).filter(c=>c.length>4);
-
- // Lấy tất cả ngày có data, lọc province rows
+ const allRows=csvText.split('\n').slice(1).map(l=>parseLine(l)).filter(c=>c.length>5);
  const allDates=[...new Set(allRows.map(r=>r[4]&&r[4].trim()).filter(Boolean))].sort();
  const last30=allDates.slice(-30);
  const N1=last30[last30.length-1]||'';
+ const N2=last30[last30.length-2]||'';
  const wArr=last30.slice(-8,-1); // 7 ngày trước N1
 
- // Province rows (bỏ Grand Total)
+ // TB tuần trước (calendar week trước tuần chứa N1)
+ let wPrevArr=[];
+ if(N1){
+  const dt=new Date(N1.substring(0,10));
+  const dow=dt.getDay(); // 0=CN
+  const mon=new Date(dt);mon.setDate(dt.getDate()-(dow===0?6:dow-1));
+  const prevMon=new Date(mon);prevMon.setDate(mon.getDate()-7);
+  wPrevArr=last30.filter(d=>{const x=new Date(d.substring(0,10));return x>=prevMon&&x<mon;});
+ }
+
  const provRows=allRows.filter(r=>r[0]&&r[0].trim()&&r[0].trim()!==''&&last30.includes(r[4]&&r[4].trim()));
 
  const TINH_ORDER=['XBG - Bắc Ninh','XBG - Quảng Ninh','XBG - Hải Phòng','XBG - Bắc Giang','XBG - Lạng Sơn','XBG - Hải Dương'];
- const TINH_S={'XBG - Bắc Ninh':'BN','XBG - Quảng Ninh':'QN','XBG - Hải Phòng':'HP','XBG - Bắc Giang':'BG','XBG - Lạng Sơn':'LS','XBG - Hải Dương':'HD'};
+ const TINH_FULL={'XBG - Bắc Ninh':'Bắc Ninh','XBG - Quảng Ninh':'Quảng Ninh','XBG - Hải Phòng':'Hải Phòng','XBG - Bắc Giang':'Bắc Giang','XBG - Lạng Sơn':'Lạng Sơn','XBG - Hải Dương':'Hải Dương'};
  const NHOM=['1. <5Kg','2. 5-10Kg','3. 10-15Kg','4. >=15Kg'];
  const NHOM_L={'1. <5Kg':'&lt;5Kg','2. 5-10Kg':'5-10Kg','3. 10-15Kg':'10-15Kg','4. >=15Kg':'≥15Kg'};
 
- // Build VOL map: tinh -> bc -> loai -> nhom -> date -> vol
- const V={};
+ // VOL + GTC map: tinh->bc->loai->nhom->date -> {v, g}  (v=volume, g=vol*gtc)
+ const V={},GTC={};
  for(const r of provRows){
   const t=r[0].trim(),bc=r[1].trim(),lo=r[2].trim(),nh=r[3].trim(),ng=r[4].trim();
   const v=parseFloat(r[5])||0;
+  const g=parseFloat(r[7]&&r[7].replace(',','.'))||0;
   if(!t||!ng||!lo||!nh)continue;
+  // VOL
   if(!V[t])V[t]={};if(!V[t][bc])V[t][bc]={};
   if(!V[t][bc][lo])V[t][bc][lo]={};if(!V[t][bc][lo][nh])V[t][bc][lo][nh]={};
   V[t][bc][lo][nh][ng]=(V[t][bc][lo][nh][ng]||0)+v;
+  // GTC
+  if(!GTC[t])GTC[t]={};if(!GTC[t][bc])GTC[t][bc]={};
+  if(!GTC[t][bc][lo])GTC[t][bc][lo]={};if(!GTC[t][bc][lo][ng])GTC[t][bc][lo][ng]={sv:0,sg:0};
+  GTC[t][bc][lo][ng].sv+=v;GTC[t][bc][lo][ng].sg+=v*g;
  }
 
- const gv=(t,bc,lo,nh,d)=>V[t]?.[bc]?.[lo]?.[nh]?.[d]||0;
- const moi=(t,bc,nh,d)=>gv(t,bc,'Hàng Mới Ca 1',nh,d)+gv(t,bc,'Hàng Mới Ca 2',nh,d);
- const ton=(t,bc,nh,d)=>gv(t,bc,'Hàng Tồn',nh,d);
- const avgW=(fn)=>wArr.length?wArr.reduce((s,d)=>s+fn(d),0)/wArr.length:0;
- const moiT=(t,nh,d)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+moi(t,bc,nh,d),0);
- const tonT=(t,nh,d)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+ton(t,bc,nh,d),0);
+ window._volD={V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L};
+
+ const fmtD=d=>d?d.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'';
+ const n1lbl=N1?N1.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2/$1'):'N/A';
+
+ return `
+ <div class="page-header">
+  <div class="page-title">📊 Tổng quan Volume</div>
+  <div class="page-meta" id="vol-meta">
+   <span class="tag tag-orange">📅 N-1: ${n1lbl}</span>
+  </div>
+ </div>
+
+ <div style="display:flex;align-items:center;gap:12px;padding:10px 0 16px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:6px">
+   <label style="font-size:12px;font-weight:600;color:var(--text-sub)">So sánh với:</label>
+   <select id="vol-comp-mode" onchange="_volRender()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;cursor:pointer">
+    <option value="tb7">TB 7 ngày (${fmtD(wArr[0])}–${fmtD(wArr[wArr.length-1])})</option>
+    <option value="n2">N-2 (${fmtD(N2)})</option>
+    <option value="tbweek">TB tuần trước (${fmtD(wPrevArr[0]||'')}–${fmtD(wPrevArr[wPrevArr.length-1]||'')})</option>
+   </select>
+  </div>
+ </div>
+
+ <div id="vol-tbl-a-wrap" class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🏙️</div>A. Theo Tỉnh — Volume Hàng Mới &amp; Tồn</div><div class="card-info" id="vol-a-info"></div></div>
+  <div class="table-wrap"><div id="vol-tbl-a"></div></div>
+ </div>
+
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục — Chi tiết theo Nhóm hàng</div>
+   <div style="display:flex;gap:8px;align-items:center">
+    <select id="vol-tinh-filter" onchange="_volRender()" style="padding:5px 8px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;cursor:pointer">
+     <option value="">Tất cả tỉnh</option>
+     ${TINH_ORDER.map(t=>`<option value="${t}">${TINH_FULL[t]||t}</option>`).join('')}
+    </select>
+    <input id="vol-bc-search" oninput="_volRender()" placeholder="🔍 Tìm bưu cục..." style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;width:160px">
+   </div>
+  </div>
+  <div class="table-wrap" id="vol-tbl-b-wrap" style="max-height:65vh"><div id="vol-tbl-b"></div></div>
+ </div>
+
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🔍</div>C. Phân tích & Cảnh báo GTC</div></div>
+  <div style="padding:16px"><div id="vol-tbl-c"></div></div>
+ </div>`;
+}
+
+window._volRender=function(){
+ const d=window._volD;if(!d)return;
+ const {V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L}=d;
+ const mode=(document.getElementById('vol-comp-mode')||{}).value||'tb7';
+ const tinhFil=(document.getElementById('vol-tinh-filter')||{}).value||'';
+ const bcQ=((document.getElementById('vol-bc-search')||{}).value||'').toLowerCase().trim();
+
+ // Determine comparison
+ let compDates,compLabel,isSingle=false;
+ if(mode==='n2'){compDates=[N2];compLabel='N-2 ('+fmtDD(N2)+')';isSingle=true;}
+ else if(mode==='tbweek'){compDates=wPrevArr;compLabel='TB tuần trước';}
+ else{compDates=wArr;compLabel='TB 7 ngày';}
+
+ // Update meta
+ const mi=document.getElementById('vol-a-info');if(mi)mi.textContent=`N-1 vs ${compLabel}`;
+
+ const gv=(t,bc,lo,nh,ds)=>{
+  if(isSingle){return V[t]?.[bc]?.[lo]?.[nh]?.[ds[0]]||0;}
+  if(!ds.length)return 0;
+  return ds.reduce((s,d2)=>s+(V[t]?.[bc]?.[lo]?.[nh]?.[d2]||0),0)/ds.length;
+ };
+ const moiV=(t,bc,nh,ds)=>gv(t,bc,'Hàng Mới Ca 1',nh,ds)+gv(t,bc,'Hàng Mới Ca 2',nh,ds);
+ const tonV=(t,bc,nh,ds)=>gv(t,bc,'Hàng Tồn',nh,ds);
+ const moiN1=(t,bc,nh)=>moiV(t,bc,nh,[N1]);
+ const tonN1=(t,bc,nh)=>tonV(t,bc,nh,[N1]);
+ const moiCmp=(t,bc,nh)=>moiV(t,bc,nh,compDates);
+ const tonCmp=(t,bc,nh)=>tonV(t,bc,nh,compDates);
+ const moiTN=(t,nh)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+moiN1(t,bc,nh),0);
+ const tonTN=(t,nh)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+tonN1(t,bc,nh),0);
+ const moiTC=(t,nh)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+moiCmp(t,bc,nh),0);
+ const tonTC=(t,nh)=>Object.keys(V[t]||{}).reduce((s,bc)=>s+tonCmp(t,bc,nh),0);
 
  const fN=n=>Math.round(n).toLocaleString('vi-VN');
- function mkCell(n1,w1,isNeg){
-  const diff=n1-w1;
-  const pct=w1?((diff/w1)*100).toFixed(1):0;
+ function mkCell(n1v,cmpv,isNeg){
+  const diff=n1v-cmpv;
+  const pct=cmpv?((diff/cmpv)*100).toFixed(1):0;
   const up=diff>0;
   const col=diff===0?'var(--text-sub)':up?(isNeg?'var(--red)':'var(--green)'):(isNeg?'var(--green)':'var(--red)');
   const arr=diff===0?'—':up?'▲':'▼';
-  return `<div style="line-height:1.5;text-align:center"><div style="font-weight:700">${fN(n1)}</div><div style="font-size:11px;color:var(--text-sub)">TB7:${fN(w1)}</div><div style="font-size:11px;font-weight:600;color:${col}">${arr}${pct}%</div></div>`;
+  const cmpTxt=isSingle?fN(cmpv):`~${fN(cmpv)}`;
+  return `<div style="line-height:1.5;text-align:center"><div style="font-weight:700">${fN(n1v)}</div><div style="font-size:11px;color:var(--text-sub)">${compLabel}: ${cmpTxt}</div><div style="font-size:11px;font-weight:600;color:${col}">${arr}${pct}%</div></div>`;
  }
 
- // Bảng 1: Theo Tỉnh
- function tbl1(){
+ // --- Bảng A ---
+ {
   const nc=TINH_ORDER.length;
-  let h=`<table style="min-width:700px"><thead><tr>
+  let h=`<table style="min-width:900px"><thead><tr>
    <th style="min-width:140px">Loại / Nhóm hàng</th>
-   ${TINH_ORDER.map(t=>`<th style="text-align:center">${TINH_S[t]||t}</th>`).join('')}
-   <th style="text-align:center">Tổng</th>
+   ${TINH_ORDER.map(t=>`<th style="text-align:center;min-width:120px">${TINH_FULL[t]||t}</th>`).join('')}
+   <th style="text-align:center;min-width:120px">Tổng</th>
   </tr></thead><tbody>`;
   const secs=[
-   {lbl:'📦 HÀNG MỚI (Ca 1 + Ca 2)',bg:'#E8F5E9',col:'#16A34A',fn:(t,nh,d)=>moiT(t,nh,d),neg:false,totLbl:'Tổng Mới'},
-   {lbl:'📋 HÀNG TỒN',bg:'#FEE2E2',col:'#DC2626',fn:(t,nh,d)=>tonT(t,nh,d),neg:true,totLbl:'Tổng Tồn'}
+   {lbl:'📦 HÀNG MỚI (Ca 1 + Ca 2)',bg:'#E8F5E9',col:'#16A34A',n1fn:(t,nh)=>moiTN(t,nh),cfn:(t,nh)=>moiTC(t,nh),neg:false,tot:'Tổng Mới'},
+   {lbl:'📋 HÀNG TỒN',bg:'#FEE2E2',col:'#DC2626',n1fn:(t,nh)=>tonTN(t,nh),cfn:(t,nh)=>tonTC(t,nh),neg:true,tot:'Tổng Tồn'}
   ];
   for(const s of secs){
    h+=`<tr style="background:${s.bg}"><td colspan="${nc+2}" style="font-weight:700;color:${s.col};padding:6px 10px">${s.lbl}</td></tr>`;
    for(const nh of NHOM){
-    const n1s=TINH_ORDER.map(t=>s.fn(t,nh,N1));
-    const w1s=TINH_ORDER.map(t=>avgW(d=>s.fn(t,nh,d)));
-    const tN=n1s.reduce((a,b)=>a+b,0),tW=w1s.reduce((a,b)=>a+b,0);
+    const n1s=TINH_ORDER.map(t=>s.n1fn(t,nh));
+    const cs=TINH_ORDER.map(t=>s.cfn(t,nh));
+    const tN=n1s.reduce((a,b)=>a+b,0),tC=cs.reduce((a,b)=>a+b,0);
     h+=`<tr><td style="padding-left:18px">${NHOM_L[nh]||nh}</td>
-     ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],w1s[i],s.neg)}</td>`).join('')}
-     <td>${mkCell(tN,tW,s.neg)}</td></tr>`;
+     ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
+     <td>${mkCell(tN,tC,s.neg)}</td></tr>`;
    }
-   const n1s=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+s.fn(t,nh,N1),0));
-   const w1s=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+avgW(d=>s.fn(t,nh,d)),0));
-   const tN=n1s.reduce((a,b)=>a+b,0),tW=w1s.reduce((a,b)=>a+b,0);
-   h+=`<tr class="tot"><td>${s.totLbl}</td>
-    ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],w1s[i],s.neg)}</td>`).join('')}
-    <td>${mkCell(tN,tW,s.neg)}</td></tr>`;
+   const n1s=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+s.n1fn(t,nh),0));
+   const cs=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+s.cfn(t,nh),0));
+   const tN=n1s.reduce((a,b)=>a+b,0),tC=cs.reduce((a,b)=>a+b,0);
+   h+=`<tr class="tot"><td>${s.tot}</td>
+    ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
+    <td>${mkCell(tN,tC,s.neg)}</td></tr>`;
   }
-  h+=`</tbody></table>`;return h;
+  h+=`</tbody></table>`;
+  const el=document.getElementById('vol-tbl-a');if(el)el.innerHTML=h;
  }
 
- // Bảng 2: Theo BC
- function tbl2(){
+ // --- Bảng B ---
+ {
   const nc=NHOM.length+1;
-  let h=`<table style="min-width:900px"><thead>
+  const r1h=44; // estimated first header row height px
+  let h=`<table style="min-width:900px" id="vol-tbl-b-tbl"><thead>
    <tr>
-    <th rowspan="2" style="min-width:160px">Bưu Cục</th>
-    <th colspan="${nc}" style="text-align:center;background:#E8F5E9;color:#16A34A">📦 Hàng Mới (Ca1+Ca2)</th>
-    <th colspan="${nc}" style="text-align:center;background:#FEE2E2;color:#DC2626">📋 Hàng Tồn</th>
-   </tr><tr>
+    <th rowspan="2" style="min-width:170px;position:sticky;top:0;z-index:5">Bưu Cục</th>
+    <th colspan="${nc}" style="text-align:center;background:#E8F5E9;color:#16A34A;position:sticky;top:0;z-index:4">📦 Hàng Mới (Ca1+Ca2)</th>
+    <th colspan="${nc}" style="text-align:center;background:#FEE2E2;color:#DC2626;position:sticky;top:0;z-index:4">📋 Hàng Tồn</th>
+   </tr><tr id="vol-tbl-b-row2">
     ${NHOM.map(n=>`<th style="text-align:center">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center">Tổng</th>
     ${NHOM.map(n=>`<th style="text-align:center">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center">Tổng</th>
    </tr></thead><tbody>`;
+  let any=false;
   for(const t of TINH_ORDER){
    if(!V[t])continue;
-   const bcs=Object.keys(V[t]).sort();
-   h+=`<tr style="background:#FFF7ED"><td colspan="${2*nc+1}" style="font-weight:700;color:var(--orange-dark);padding:6px 10px">🏙️ ${t.replace('XBG - ','')}</td></tr>`;
+   if(tinhFil&&tinhFil!==t)continue;
+   const bcs=Object.keys(V[t]).sort().filter(bc=>!bcQ||bc.toLowerCase().includes(bcQ)||(TINH_FULL[t]||'').toLowerCase().includes(bcQ));
+   if(!bcs.length)continue;
+   h+=`<tr style="background:#FFF7ED"><td colspan="${2*nc+1}" style="font-weight:700;color:var(--orange-dark);padding:6px 10px">🏙️ ${TINH_FULL[t]||t}</td></tr>`;
    for(const bc of bcs){
-    const mn1=NHOM.map(nh=>moi(t,bc,nh,N1));
-    const mw1=NHOM.map(nh=>avgW(d=>moi(t,bc,nh,d)));
-    const tn1=NHOM.map(nh=>ton(t,bc,nh,N1));
-    const tw1=NHOM.map(nh=>avgW(d=>ton(t,bc,nh,d)));
-    const tmN=mn1.reduce((a,b)=>a+b,0),tmW=mw1.reduce((a,b)=>a+b,0);
-    const ttN=tn1.reduce((a,b)=>a+b,0),ttW=tw1.reduce((a,b)=>a+b,0);
+    const mn1=NHOM.map(nh=>moiN1(t,bc,nh));
+    const mc=NHOM.map(nh=>moiCmp(t,bc,nh));
+    const tn1=NHOM.map(nh=>tonN1(t,bc,nh));
+    const tc=NHOM.map(nh=>tonCmp(t,bc,nh));
+    const tmN=mn1.reduce((a,b)=>a+b,0),tmC=mc.reduce((a,b)=>a+b,0);
+    const ttN=tn1.reduce((a,b)=>a+b,0),ttC=tc.reduce((a,b)=>a+b,0);
     h+=`<tr>
      <td style="padding-left:12px;white-space:nowrap;font-size:12px">${bc}</td>
-     ${NHOM.map((_,i)=>`<td>${mkCell(mn1[i],mw1[i],false)}</td>`).join('')}
-     <td>${mkCell(tmN,tmW,false)}</td>
-     ${NHOM.map((_,i)=>`<td>${mkCell(tn1[i],tw1[i],true)}</td>`).join('')}
-     <td>${mkCell(ttN,ttW,true)}</td>
+     ${NHOM.map((_,i)=>`<td>${mkCell(mn1[i],mc[i],false)}</td>`).join('')}
+     <td>${mkCell(tmN,tmC,false)}</td>
+     ${NHOM.map((_,i)=>`<td>${mkCell(tn1[i],tc[i],true)}</td>`).join('')}
+     <td>${mkCell(ttN,ttC,true)}</td>
     </tr>`;
+    any=true;
    }
   }
-  h+=`</tbody></table>`;return h;
+  if(!any)h+=`<tr><td colspan="${2*nc+1}" style="text-align:center;color:var(--text-sub);padding:20px">Không tìm thấy bưu cục phù hợp</td></tr>`;
+  h+=`</tbody></table>`;
+  const el=document.getElementById('vol-tbl-b');if(el)el.innerHTML=h;
+  // Fix sticky row 2 top offset
+  setTimeout(()=>{
+   const r1=document.querySelector('#vol-tbl-b-tbl thead tr:first-child');
+   const r2=document.querySelector('#vol-tbl-b-row2');
+   if(r1&&r2){const h1=r1.getBoundingClientRect().height;r2.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=h1+'px';th.style.zIndex='3';th.style.backgroundColor='#FAFAFA';});}
+  },50);
  }
 
- // Bảng 3: Phân tích
- function tbl3(){
-  const tStats=TINH_ORDER.map(t=>{
-   const mN=NHOM.reduce((s,nh)=>s+moiT(t,nh,N1),0);
-   const mW=NHOM.reduce((s,nh)=>s+avgW(d=>moiT(t,nh,d)),0);
-   const tN=NHOM.reduce((s,nh)=>s+tonT(t,nh,N1),0);
-   const tW=NHOM.reduce((s,nh)=>s+avgW(d=>tonT(t,nh,d)),0);
-   return {t,mN,mW,tN,tW,mD:mN-mW,mP:mW?(mN-mW)/mW*100:0,tD:tN-tW,tP:tW?(tN-tW)/tW*100:0};
+ // --- Bảng C: Phân tích + Cảnh báo GTC ---
+ {
+  // GTC weighted avg per tỉnh for N1
+  const gtcColor=(g)=>g>=0.8?'var(--green)':g>=0.65?'var(--yellow)':'var(--red)';
+  const gtcBadge=(g)=>{const pct=(g*100).toFixed(1)+'%';const col=gtcColor(g);const bg=g>=0.8?'var(--green-bg)':g>=0.65?'var(--yellow-bg)':'var(--red-bg)';return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;background:${bg};color:${col};font-weight:700;font-size:12px">${pct}</span>`;};
+
+  // Tỉnh GTC stats
+  const tinhGtc=TINH_ORDER.map(t=>{
+   const loais=['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'];
+   const stats={};
+   for(const lo of loais){
+    let sv=0,sg=0;
+    if(GTC[t])for(const bc of Object.keys(GTC[t])){if(GTC[t][bc][lo]&&GTC[t][bc][lo][N1]){sv+=GTC[t][bc][lo][N1].sv;sg+=GTC[t][bc][lo][N1].sg;}}
+    stats[lo]=sv>0?sg/sv:null;
+   }
+   return {t,stats};
   });
-  const bcStats=[];
-  for(const t of TINH_ORDER){if(!V[t])continue;
-   for(const bc of Object.keys(V[t])){
-    const mN=NHOM.reduce((s,nh)=>s+moi(t,bc,nh,N1),0);
-    const mW=NHOM.reduce((s,nh)=>s+avgW(d=>moi(t,bc,nh,d)),0);
-    const tN=NHOM.reduce((s,nh)=>s+ton(t,bc,nh,N1),0);
-    const tW=NHOM.reduce((s,nh)=>s+avgW(d=>ton(t,bc,nh,d)),0);
-    bcStats.push({t,bc,mN,mW,tN,tW,mD:mN-mW,mP:mW?(mN-mW)/mW*100:0,tD:tN-tW,tP:tW?(tN-tW)/tW*100:0});
+
+  // BC GTC stats (lowest Mới)
+  const bcGtcAll=[];
+  for(const t of TINH_ORDER){if(!GTC[t])continue;
+   for(const bc of Object.keys(GTC[t])){
+    const lo='Hàng Mới Ca 1';
+    const g=GTC[t][bc][lo]&&GTC[t][bc][lo][N1]&&GTC[t][bc][lo][N1].sv>0?GTC[t][bc][lo][N1].sg/GTC[t][bc][lo][N1].sv:null;
+    const loT='Hàng Tồn';
+    const gT=GTC[t][bc][loT]&&GTC[t][bc][loT][N1]&&GTC[t][bc][loT][N1].sv>0?GTC[t][bc][loT][N1].sg/GTC[t][bc][loT][N1].sv:null;
+    if(g!==null||gT!==null)bcGtcAll.push({t,bc,gMoi:g,gTon:gT});
    }
   }
-  const hM=bcStats.filter(b=>b.mD>0).sort((a,b)=>b.mD-a.mD).slice(0,12);
-  const hT=bcStats.filter(b=>b.tD>0).sort((a,b)=>b.tD-a.tD).slice(0,12);
-  const fs=(d,p)=>`${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p.toFixed(1)}%)`;
-  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Vấn đề 1 — Biến động theo Tỉnh (N-1 vs TB7)</div></div>
+  const bcLowMoi=bcGtcAll.filter(b=>b.gMoi!==null&&b.gMoi<0.8).sort((a,b)=>a.gMoi-b.gMoi).slice(0,12);
+  const bcLowTon=bcGtcAll.filter(b=>b.gTon!==null&&b.gTon<0.65).sort((a,b)=>a.gTon-b.gTon).slice(0,12);
+
+  const loLabels={'Hàng Mới Ca 1':'Mới Ca1','Hàng Mới Ca 2':'Mới Ca2','Hàng Tồn':'Tồn'};
+
+  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Vấn đề 1 — Biến động Volume (N-1 vs ${compLabel})</div></div>
   <div class="table-wrap"><table>
   <thead><tr><th>Tỉnh</th><th>Mới N-1</th><th>Mới Δ</th><th>Tồn N-1</th><th>Tồn Δ</th></tr></thead>
-  <tbody>${tStats.map(s=>`<tr>
-   <td style="font-weight:600">${s.t.replace('XBG - ','')}</td>
-   <td style="text-align:right">${fN(s.mN)}</td>
-   <td style="color:${s.mD>=0?'var(--green)':'var(--red)'};font-weight:600">${s.mD>=0?'▲':'▼'} ${fs(s.mD,s.mP)}</td>
-   <td style="text-align:right">${fN(s.tN)}</td>
-   <td style="color:${s.tD>0?'var(--red)':'var(--green)'};font-weight:600">${s.tD>0?'▲':'▼'} ${fs(s.tD,s.tP)}</td>
-  </tr>`).join('')}</tbody></table></div></div>
-  <div style="display:flex;flex-direction:column;gap:12px">
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Vấn đề 2a — BC Hàng Mới cao hơn TB7</div></div>
-  <div class="table-wrap" style="max-height:300px"><table>
-  <thead><tr><th>Bưu Cục</th><th>N-1</th><th>TB7</th><th>Δ</th></tr></thead>
-  <tbody>${hM.length?hM.map(b=>`<tr>
-   <td>${b.bc}<br><span style="font-size:11px;color:var(--text-sub)">${b.t.replace('XBG - ','')}</span></td>
-   <td style="text-align:right;font-weight:700">${fN(b.mN)}</td>
-   <td style="text-align:right;color:var(--text-sub)">${fN(b.mW)}</td>
-   <td style="color:var(--green);font-weight:600">▲ ${fs(b.mD,b.mP)}</td>
-  </tr>`).join(''):'<tr><td colspan="4" style="color:var(--text-sub);text-align:center">Không có BC nào tăng</td></tr>'}</tbody></table></div></div>
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Vấn đề 2b — BC Hàng Tồn cao hơn TB7</div></div>
-  <div class="table-wrap" style="max-height:300px"><table>
-  <thead><tr><th>Bưu Cục</th><th>N-1</th><th>TB7</th><th>Δ</th></tr></thead>
-  <tbody>${hT.length?hT.map(b=>`<tr>
-   <td>${b.bc}<br><span style="font-size:11px;color:var(--text-sub)">${b.t.replace('XBG - ','')}</span></td>
-   <td style="text-align:right;font-weight:700">${fN(b.tN)}</td>
-   <td style="text-align:right;color:var(--text-sub)">${fN(b.tW)}</td>
-   <td style="color:var(--red);font-weight:600">▲ ${fs(b.tD,b.tP)}</td>
-  </tr>`).join(''):'<tr><td colspan="4" style="color:var(--text-sub);text-align:center">Không có BC nào tăng tồn</td></tr>'}</tbody></table></div></div>
-  </div></div>`;
- }
+  <tbody>${TINH_ORDER.map(t=>{
+   const mN=NHOM.reduce((s,nh)=>s+moiTN(t,nh),0);const mC=NHOM.reduce((s,nh)=>s+moiTC(t,nh),0);
+   const tN=NHOM.reduce((s,nh)=>s+tonTN(t,nh),0);const tC=NHOM.reduce((s,nh)=>s+tonTC(t,nh),0);
+   const mD=mN-mC;const tD=tN-tC;
+   const mP=mC?(mD/mC*100).toFixed(1):0;const tP=tC?(tD/tC*100).toFixed(1):0;
+   const fs=(d,p)=>`${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p}%)`;
+   return `<tr><td style="font-weight:600">${TINH_FULL[t]||t}</td>
+    <td style="text-align:right">${fN(mN)}</td>
+    <td style="color:${mD>=0?'var(--green)':'var(--red)'};font-weight:600">${mD>=0?'▲':'▼'} ${fs(mD,mP)}</td>
+    <td style="text-align:right">${fN(tN)}</td>
+    <td style="color:${tD>0?'var(--red)':'var(--green)'};font-weight:600">${tD>0?'▲':'▼'} ${fs(tD,tP)}</td>
+   </tr>`;
+  }).join('')}</tbody></table></div></div>
 
- const n1lbl=N1?N1.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2/$1'):'N/A';
- const w0=wArr[0]?wArr[0].replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'';
- const wE=wArr[wArr.length-1]?wArr[wArr.length-1].replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'';
- return `
- <div class="page-header">
-  <div class="page-title">📊 Tổng quan Volume</div>
-  <div class="page-meta">
-   <span class="tag tag-orange">📅 N-1: ${n1lbl}</span>
-   <span class="tag" style="background:#EFF6FF;color:#1D4ED8">📈 TB7: ${w0}–${wE}</span>
-  </div>
- </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏙️</div>A. Theo Tỉnh — Volume Hàng Mới &amp; Tồn</div><div class="card-info">N-1 vs TB 7 ngày trước</div></div>
- <div class="table-wrap">${tbl1()}</div></div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục — Chi tiết theo Nhóm hàng</div><div class="card-info">N-1 vs TB 7 ngày trước</div></div>
- <div class="table-wrap">${tbl2()}</div></div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🔍</div>C. Phân tích — Điểm cần chú ý</div></div>
- <div style="padding:16px">${tbl3()}</div></div>`;
-}
+  <div style="display:flex;flex-direction:column;gap:12px">
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>Cảnh báo GTC — Theo Tỉnh (N-1)</div></div>
+  <div class="table-wrap"><table>
+  <thead><tr><th>Tỉnh</th><th style="text-align:center">GTC Mới Ca1</th><th style="text-align:center">GTC Mới Ca2</th><th style="text-align:center">GTC Tồn</th></tr></thead>
+  <tbody>${tinhGtc.map(({t,stats})=>`<tr>
+   <td style="font-weight:600">${TINH_FULL[t]||t}</td>
+   ${['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].map(lo=>`<td style="text-align:center">${stats[lo]!==null?gtcBadge(stats[lo]):'—'}</td>`).join('')}
+  </tr>`).join('')}</tbody></table></div></div>
+
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>BC có GTC Mới Ca1 thấp (&lt;80%)</div></div>
+  <div class="table-wrap" style="max-height:220px"><table>
+  <thead><tr><th>Bưu Cục</th><th style="text-align:center">GTC Mới Ca1</th><th style="text-align:center">GTC Tồn</th></tr></thead>
+  <tbody>${bcLowMoi.length?bcLowMoi.map(b=>`<tr>
+   <td>${b.bc}<br><span style="font-size:11px;color:var(--text-sub)">${TINH_FULL[b.t]||b.t}</span></td>
+   <td style="text-align:center">${b.gMoi!==null?gtcBadge(b.gMoi):'—'}</td>
+   <td style="text-align:center">${b.gTon!==null?gtcBadge(b.gTon):'—'}</td>
+  </tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--text-sub)">Tất cả BC đạt ≥80%</td></tr>'}</tbody></table></div></div>
+  </div></div>`;
+  const el=document.getElementById('vol-tbl-c');if(el)el.innerHTML=h;
+ }
+};
+function fmtDD(d){return d?d.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'?';}
+setTimeout(()=>{if(window._volD)_volRender();},100);
 
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
