@@ -2909,29 +2909,41 @@ window._volRender=function(){
 
   const fs=(d,p,isNeg)=>{const up=d>0;const col=d===0?'var(--text-sub)':up?(isNeg?'var(--red)':'var(--green)'):(isNeg?'var(--green)':'var(--red)');const arr=d===0?'—':up?'▲':'▼';return `<span style="color:${col};font-weight:600">${arr} ${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p.toFixed(1)}%)</span>`;};
 
-  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>1. Biến động Volume theo Tỉnh (N-1 vs ${compLabel})</div></div>
+  const tinhGtcMap={};tinhGtc.forEach(({t,stats})=>{tinhGtcMap[t]=stats;});
+  let h=`<div class="card" style="margin-bottom:16px">
+  <div class="card-header"><div class="card-title"><div class="card-icon">📊</div>1. Tổng hợp Volume &amp; GTC theo Tỉnh (N-1 vs ${compLabel})</div></div>
   <div class="table-wrap"><table>
-  <thead><tr><th>Tỉnh</th><th style="text-align:right">Mới N-1</th><th>Mới Δ</th><th style="text-align:right">Tồn N-1</th><th>Tồn Δ</th></tr></thead>
+  <thead>
+   <tr>
+    <th rowspan="2" style="min-width:110px;vertical-align:middle">Tỉnh</th>
+    <th colspan="4" style="text-align:center;border-left:2px solid #E5E7EB;background:#E8F5E9;color:#16A34A">📦 Hàng Mới</th>
+    <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#FEE2E2;color:#DC2626">📋 Hàng Tồn</th>
+   </tr>
+   <tr>
+    <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
+    <th>Δ vs ${compLabel}</th>
+    <th style="text-align:center">GTC Ca1</th>
+    <th style="text-align:center">GTC Ca2</th>
+    <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
+    <th>Δ vs ${compLabel}</th>
+    <th style="text-align:center">GTC Tồn</th>
+   </tr>
+  </thead>
   <tbody>${TINH_ORDER.map(t=>{
    const mN=NHOM.reduce((s,nh)=>s+moiTN(t,nh),0);const mC=NHOM.reduce((s,nh)=>s+moiTC(t,nh),0);
    const tN=NHOM.reduce((s,nh)=>s+tonTN(t,nh),0);const tC=NHOM.reduce((s,nh)=>s+tonTC(t,nh),0);
-   return `<tr><td style="font-weight:600">${TINH_FULL[t]||t}</td>
-    <td style="text-align:right;font-weight:700">${fN(mN)}</td>
+   const st=tinhGtcMap[t]||{};
+   return `<tr>
+    <td style="font-weight:600">${TINH_FULL[t]||t}</td>
+    <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(mN)}</td>
     <td>${fs(mN-mC,mC?(mN-mC)/mC*100:0,false)}</td>
-    <td style="text-align:right;font-weight:700">${fN(tN)}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 1'])}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 2'])}</td>
+    <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(tN)}</td>
     <td>${fs(tN-tC,tC?(tN-tC)/tC*100:0,true)}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Tồn'])}</td>
    </tr>`;
   }).join('')}</tbody></table></div></div>
-
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>2. Cảnh báo GTC — Theo Tỉnh (N-1)</div></div>
-  <div class="table-wrap"><table>
-  <thead><tr><th>Tỉnh</th><th style="text-align:center">GTC Mới Ca1</th><th style="text-align:center">GTC Mới Ca2</th><th style="text-align:center">GTC Tồn</th></tr></thead>
-  <tbody>${tinhGtc.map(({t,stats})=>`<tr>
-   <td style="font-weight:600">${TINH_FULL[t]||t}</td>
-   ${['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].map(lo=>`<td style="text-align:center">${gtcBadge(stats[lo])}</td>`).join('')}
-  </tr>`).join('')}</tbody></table></div></div>
-  </div>
 
   <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>3. Đánh giá chi tiết Bưu Cục — Volume &amp; GTC (N-1 vs ${compLabel})</div>
    <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: GTC Mới&lt;70% hoặc Tồn tăng mạnh &nbsp;|&nbsp; 🟡 Cần chú ý: GTC Mới 70-80% hoặc Tồn tăng &gt;15%</div>
