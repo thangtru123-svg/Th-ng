@@ -1597,7 +1597,29 @@ async function sendAllToTelegram(){
 
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
-  await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
+  /* AM: clone card, ẩn search bar, width vừa đủ */
+  {
+   if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo AM...';
+   const amCard=document.getElementById('p3-card-am');
+   if(amCard){
+    const cl=amCard.cloneNode(true);
+    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    const tmp=document.createElement('div');
+    tmp.id='tg-am-fd';
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';
+    tmp.appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,300));
+    try{
+     const img=await _captureEl('tg-am-fd');
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));
+     if(!res.ok)throw new Error('TLT AM loi: '+(res.description||JSON.stringify(res)));
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,600));
+   }else{
+    await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
+   }
+  }
   /* BC: chụp Top 15 FD total + analysis, clone card đầy đủ */
   {
    if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo BC Top 15...';
